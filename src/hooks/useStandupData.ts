@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { StandupUpdate, FilterOptions, TeamMember } from '../types';
 import { TeamsApiService } from '../services/teamsApiService';
 import { ProfilePhotoService } from '../services/ProfilePhotoService';
@@ -14,6 +14,7 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
+  const [nextPageSkipToken, setNextPageSkipToken] = useState<string | undefined>(undefined);
   const [filters, setFilters] = useState<FilterOptions>({
     searchTerm: '',
     selectedMembers: [],
@@ -43,21 +44,22 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
           ProfilePhotoService.setAccessToken(accessToken);
         }
 
-        // Fetch standup updates
-        const standupUpdates = await TeamsApiService.fetchMessages(activeChatId, accessToken);
+        // Fetch initial standup updates
+        const response = await TeamsApiService.fetchMessages(activeChatId, accessToken);
         
-        console.log('useStandupData: Received standup updates:', {
-          count: standupUpdates.length,
-          updates: standupUpdates
+        console.log('useStandupData: Received initial standup updates:', {
+          count: response.messages.length,
+          nextSkipToken: response.nextSkipToken,
+          // updates: response.messages // Avoid logging potentially large array
         });
         
         // Validate that we received the correct format
-        if (!Array.isArray(standupUpdates)) {
-          throw new Error('TeamsApiService did not return an array of updates');
+        if (!response || !Array.isArray(response.messages)) {
+          throw new Error('TeamsApiService did not return the expected paginated response format for initial load');
         }
 
         // Additional validation for each update
-        const validUpdates = standupUpdates.filter(update => {
+        const validUpdates = response.messages.filter(update => {
           if (!update || !update.member || !update.member.id) {
             console.warn('Invalid update filtered out:', update);
             return false;
@@ -67,15 +69,17 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
 
         console.log('useStandupData: Valid updates after filtering:', validUpdates.length);
         setUpdates(validUpdates);
+        setNextPageSkipToken(response.nextSkipToken);
         
-        if (validUpdates.length === 0 && standupUpdates.length > 0) {
-          setError(`${standupUpdates.length} updates were received but none were valid standup messages`);
+        if (validUpdates.length === 0 && response.messages.length > 0) {
+          setError(`${response.messages.length} updates were received but none were valid standup messages`);
         }
         
       } catch (error) {
-        console.error('useStandupData: Failed to load standup data:', error);
+        console.error('useStandupData: Failed to load initial standup data:', error);
         setError(error instanceof Error ? error.message : 'Failed to load data');
         setUpdates([]);
+        setNextPageSkipToken(undefined);
       } finally {
         setLoading(false);
       }
@@ -206,25 +210,98 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
     enhanceWithRealPhotos();
   }, [teamMembers, accessToken]);
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     console.log('useStandupData: Refreshing data...');
     setLoading(true);
     setError(null);
+    setNextPageSkipToken(undefined); // Reset pagination
     
     try {
-      // Clear caches
+      // Clear caches (ProfilePhotoService cache; TeamsApiService cache is handled by its methods if needed)
       ProfilePhotoService.clearCache();
       
-      const standupUpdates = await TeamsApiService.refreshMessages(activeChatId, accessToken);
-      console.log('useStandupData: Refreshed updates:', standupUpdates.length);
-      setUpdates(standupUpdates);
+      // Fetch the first page of messages
+      const response = await TeamsApiService.fetchMessages(activeChatId, accessToken);
+
+      console.log('useStandupData: Refreshed updates received:', {
+        count: response.messages.length,
+        nextSkipToken: response.nextSkipToken,
+        // updates: response.messages // Avoid logging potentially large array
+      });
+
+      if (!response || !Array.isArray(response.messages)) {
+        throw new Error('TeamsApiService did not return the expected paginated response format for refresh');
+      }
+
+      // Validate updates
+      const validUpdates = response.messages.filter(update => {
+        if (!update || !update.member || !update.member.id) {
+          console.warn('Invalid refreshed update filtered out:', update);
+          return false;
+        }
+        return true;
+      });
+
+      setUpdates(validUpdates);
+      setNextPageSkipToken(response.nextSkipToken);
+
     } catch (error) {
       console.error('useStandupData: Failed to refresh standup data:', error);
       setError(error instanceof Error ? error.message : 'Failed to refresh data');
+      setUpdates([]); // Clear updates on error during refresh
+      setNextPageSkipToken(undefined);
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeChatId, accessToken]);
+
+  const fetchMoreMessages = useCallback(async () => {
+    if (loading || !nextPageSkipToken || !activeChatId || !accessToken) {
+      console.log('useStandupData: Skipping fetchMoreMessages', {
+        loading,
+        hasNextPage: !!nextPageSkipToken,
+        activeChatIdExists: !!activeChatId,
+        accessTokenExists: !!accessToken
+      });
+      return;
+    }
+    console.log('useStandupData: Fetching more messages...', { currentSkipToken: nextPageSkipToken });
+    setLoading(true);
+    // setError(null); // Optional: clear specific pagination errors, or let them override general errors
+
+    try {
+      const response = await TeamsApiService.fetchMessages(activeChatId, accessToken, nextPageSkipToken);
+
+      console.log('useStandupData: Received more messages:', {
+        count: response.messages.length,
+        nextSkipToken: response.nextSkipToken,
+        // updates: response.messages // Avoid logging potentially large array
+      });
+
+      if (!response || !Array.isArray(response.messages)) {
+        throw new Error('TeamsApiService did not return the expected paginated response format for fetchMore');
+      }
+
+      const validNewMessages = response.messages.filter(update => {
+        if (!update || !update.member || !update.member.id) {
+          console.warn('Invalid new update filtered out during fetchMore:', update);
+          return false;
+        }
+        return true;
+      });
+
+      setUpdates(prevUpdates => [...validNewMessages, ...prevUpdates]); // Prepend new messages
+      setNextPageSkipToken(response.nextSkipToken);
+      console.log('useStandupData: More messages fetched successfully', { newCount: validNewMessages.length, newNextToken: response.nextSkipToken });
+    } catch (err) {
+      console.error('useStandupData: Failed to fetch more messages:', err);
+      const message = err instanceof Error ? err.message : 'Failed to load more messages';
+      setError(message);
+      // Don't change nextPageSkipToken on error, so user might retry if it was a temporary issue.
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, nextPageSkipToken, activeChatId, accessToken, setUpdates, setNextPageSkipToken, setError, setLoading]);
 
   const clearFilters = () => {
     setFilters({
@@ -246,6 +323,8 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
     teamMembers: enhancedTeamMembers, // Use enhanced team members with real photos
     projects,
     refreshData,
-    clearFilters
+    clearFilters,
+    fetchMoreMessages,
+    hasMoreMessages: !!nextPageSkipToken,
   };
 };
