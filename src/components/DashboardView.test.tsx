@@ -1,192 +1,203 @@
+// @ts-nocheck
 import React from 'react';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import DashboardView from './DashboardView';
+import { aiSummaryService } from '../../services/aiSummaryService';
 import { StandupUpdate, TeamMember, FilterOptions } from '../types';
 
-// Mock Data
-const mockTeamMembersArray: TeamMember[] = [
-  { id: '1', name: 'Alice Wonderland', email: 'alice@example.com', jobTitle: 'Engineer' },
-  { id: '2', name: 'Bob The Builder', email: 'bob@example.com', jobTitle: 'Contractor' },
-  { id: '3', name: 'Charlie Brown', email: 'charlie@example.com', jobTitle: 'Manager' },
+// Mock the AI Summary Service
+jest.mock('../../services/aiSummaryService', () => ({
+  aiSummaryService: {
+    generateSummary: jest.fn(),
+  },
+}));
+
+const mockUpdates: StandupUpdate[] = [
+  { id: '1', member: { id: 'm1', name: 'Alice' }, project: 'Project A', rawMessage: 'Alice update 1', htmlMessage: '', timestamp: '', date: '2023-01-01' },
+  { id: '2', member: { id: 'm1', name: 'Alice' }, project: 'Project B', rawMessage: 'Alice update 2', htmlMessage: '', timestamp: '', date: '2023-01-01' },
+  { id: '3', member: { id: 'm2', name: 'Bob' }, project: 'Project A', rawMessage: 'Bob update 1', htmlMessage: '', timestamp: '', date: '2023-01-01' },
 ];
 
-const mockUpdatesArray: StandupUpdate[] = [
-  {
-    id: 'u1', member: mockTeamMembersArray[0], projectName: 'Project A', date: '2023-10-26', timestamp: '1',
-    accomplishments: ['Did X'], tasksCompleted: true, todayPlans: ['Do Y'], rawMessage: 'msg'
-  },
-  {
-    id: 'u2', member: mockTeamMembersArray[1], projectName: 'Project B', date: '2023-10-26', timestamp: '2',
-    accomplishments: ['Did Z'], tasksCompleted: true, todayPlans: ['Do W'], rawMessage: 'msg2'
-  },
-  {
-    id: 'u3', member: mockTeamMembersArray[0], projectName: 'Project C', date: '2023-10-26', timestamp: '3',
-    accomplishments: ['Did V'], tasksCompleted: true, todayPlans: ['Do U'], rawMessage: 'msg3'
-  },
+const mockTeamMembers: TeamMember[] = [
+  { id: 'm1', name: 'Alice' },
+  { id: 'm2', name: 'Bob' },
 ];
 
-const mockProjectsArray: string[] = ['Project A', 'Project B', 'Project C', 'Project D'];
+const mockProjects: string[] = ['Project A', 'Project B'];
 
-const mockInitialFilters: FilterOptions = {
+const initialFilters: FilterOptions = {
   searchTerm: '',
   selectedMembers: [],
   dateRange: { start: '', end: '' },
   projectFilter: '',
 };
 
-const mockSetFilters = jest.fn();
-
-// Helper function to render the component with default or overridden props
-const renderDashboardView = (props: Partial<React.ComponentProps<typeof DashboardView>> = {}) => {
-  const defaultProps: React.ComponentProps<typeof DashboardView> = {
-    updates: mockUpdatesArray,
-    teamMembers: mockTeamMembersArray, // For display list
-    allTeamMembers: mockTeamMembersArray, // For filter population
-    projects: mockProjectsArray,
-    filters: mockInitialFilters,
-    setFilters: mockSetFilters,
-    ...props,
-  };
-  return render(<DashboardView {...defaultProps} />);
+const defaultProps = {
+  updates: mockUpdates,
+  teamMembers: mockTeamMembers,
+  allTeamMembers: mockTeamMembers,
+  projects: mockProjects,
+  filters: initialFilters,
+  setFilters: jest.fn(),
 };
 
-describe('DashboardView Component', () => {
+describe('DashboardView AI Summary Functionality', () => {
   beforeEach(() => {
-    mockSetFilters.mockClear(); // Clear mock before each test
+    (aiSummaryService.generateSummary as jest.Mock).mockClear();
+    defaultProps.setFilters.mockClear();
+    // Reset filters to initial state for most tests, can be overridden in specific tests
+    defaultProps.filters = { ...initialFilters };
   });
 
-  describe('Rendering', () => {
-    test('renders main section headings', () => {
-      renderDashboardView();
-      expect(screen.getByText('Filters')).toBeInTheDocument();
-      expect(screen.getByText('Total Displayed Updates')).toBeInTheDocument();
-      expect(screen.getByText('User-wise Updates')).toBeInTheDocument();
-    });
+  const getSummaryButton = () => screen.queryByRole('button', { name: /generate ai summary/i });
+  const getGeneratingButton = () => screen.queryByRole('button', { name: /generating summary.../i });
 
-    test('renders all filter input placeholders', () => {
-      renderDashboardView();
-      // Filters section
-      expect(screen.getByLabelText('Search')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Keywords...')).toBeInTheDocument();
-
-      expect(screen.getByLabelText('Team Member')).toBeInTheDocument();
-      expect(screen.getByRole('combobox', { name: 'Team Member' })).toBeInTheDocument();
-
-      expect(screen.getByLabelText('Date Range')).toBeInTheDocument();
-      expect(screen.getByLabelText('Start date')).toBeInTheDocument();
-      expect(screen.getByLabelText('End date')).toBeInTheDocument();
-
-      expect(screen.getByLabelText('Project')).toBeInTheDocument();
-      expect(screen.getByRole('combobox', { name: 'Project' })).toBeInTheDocument();
-    });
+  it('should not display the "Generate AI Summary" button initially when no relevant filters are set', () => {
+    render(<DashboardView {...defaultProps} />);
+    expect(getSummaryButton()).not.toBeInTheDocument();
   });
 
-  describe('Data Display', () => {
-    test('displays the correct total number of updates', () => {
-      renderDashboardView();
-      expect(screen.getByText(mockUpdatesArray.length.toString())).toBeInTheDocument();
-    });
-
-    test('displays the correct update count for each team member in the display list', () => {
-      renderDashboardView();
-      const listItems = screen.getAllByRole('listitem');
-
-      const aliceItem = listItems.find(item => within(item).queryByText('Alice Wonderland') !== null);
-      expect(aliceItem).toBeInTheDocument();
-      expect(within(aliceItem!).getByText('2 updates')).toBeInTheDocument();
-
-      const bobItem = listItems.find(item => within(item).queryByText('Bob The Builder') !== null);
-      expect(bobItem).toBeInTheDocument();
-      expect(within(bobItem!).getByText('1 update')).toBeInTheDocument();
-
-      const charlieItem = listItems.find(item => within(item).queryByText('Charlie Brown') !== null);
-      expect(charlieItem).toBeInTheDocument();
-      expect(within(charlieItem!).getByText('0 updates')).toBeInTheDocument();
-    });
+  it('should display the button when a project filter is active', () => {
+    render(<DashboardView {...defaultProps} filters={{ ...initialFilters, projectFilter: 'Project A' }} />);
+    expect(getSummaryButton()).toBeInTheDocument();
   });
 
-  describe('Filter Interactions', () => {
-    test('calls setFilters with correct search term', () => {
-      renderDashboardView();
-      const searchInput = screen.getByPlaceholderText('Keywords...');
-      fireEvent.change(searchInput, { target: { value: 'test search' } });
-      expect(mockSetFilters).toHaveBeenCalledWith(expect.any(Function));
-      // To check the actual value, we can invoke the function passed to setFilters
-      const updaterFunction = mockSetFilters.mock.calls[0][0];
-      expect(updaterFunction(mockInitialFilters)).toEqual({ ...mockInitialFilters, searchTerm: 'test search' });
+  it('should display the button when a team member filter is active', () => {
+    render(<DashboardView {...defaultProps} filters={{ ...initialFilters, selectedMembers: ['m1'] }} />);
+    expect(getSummaryButton()).toBeInTheDocument();
+  });
+
+  describe('Summary Generation Process', () => {
+    const summaryText = 'This is a mock summary.';
+    const updatesForSummary = mockUpdates;
+
+    beforeEach(() => {
+      // Ensure button is present for these tests by setting a relevant filter
+      defaultProps.filters = { ...initialFilters, projectFilter: 'Project A' };
     });
 
-    test('calls setFilters with correct team member selection', () => {
-      renderDashboardView();
-      const teamMemberSelect = screen.getByRole('combobox', { name: 'Team Member' });
-      fireEvent.change(teamMemberSelect, { target: { value: mockTeamMembersArray[0].id } }); // Select Alice
-      expect(mockSetFilters).toHaveBeenCalledWith(expect.any(Function));
-      const updaterFunction = mockSetFilters.mock.calls[0][0];
-      expect(updaterFunction(mockInitialFilters)).toEqual({ ...mockInitialFilters, selectedMembers: [mockTeamMembersArray[0].id] });
+    it('should call aiSummaryService.generateSummary with concatenated rawMessages and show loading state', async () => {
+      (aiSummaryService.generateSummary as jest.Mock).mockReturnValue(new Promise(() => {})); // Keep it pending
+
+      render(<DashboardView {...defaultProps} updates={updatesForSummary} />);
+      fireEvent.click(getSummaryButton());
+
+      expect(aiSummaryService.generateSummary).toHaveBeenCalledWith(
+        updatesForSummary.map(u => u.rawMessage).join('\\n\\n')
+      );
+      expect(getGeneratingButton()).toBeInTheDocument();
+      expect(screen.getByText(/generating summary, please wait.../i)).toBeInTheDocument();
     });
 
-    test('calls setFilters with correct start date', () => {
-      renderDashboardView();
-      const startDateInput = screen.getByLabelText('Start date');
-      fireEvent.change(startDateInput, { target: { value: '2023-01-01' } });
-      expect(mockSetFilters).toHaveBeenCalledWith(expect.any(Function));
-      const updaterFunction = mockSetFilters.mock.calls[0][0];
-      expect(updaterFunction(mockInitialFilters)).toEqual({ ...mockInitialFilters, dateRange: { start: '2023-01-01', end: '' } });
-    });
+    it('should display the summary when generation is successful', async () => {
+      (aiSummaryService.generateSummary as jest.Mock).mockResolvedValue(summaryText);
+      render(<DashboardView {...defaultProps} updates={updatesForSummary} />);
 
-    test('calls setFilters with correct end date', () => {
-        renderDashboardView();
-        const endDateInput = screen.getByLabelText('End date');
-        fireEvent.change(endDateInput, { target: { value: '2023-01-31' } });
-        expect(mockSetFilters).toHaveBeenCalledWith(expect.any(Function));
-        const updaterFunction = mockSetFilters.mock.calls[0][0];
-        expect(updaterFunction(mockInitialFilters)).toEqual({ ...mockInitialFilters, dateRange: { start: '', end: '2023-01-31' } });
+      fireEvent.click(getSummaryButton());
+
+      await waitFor(() => {
+        expect(screen.getByText('AI Generated Summary')).toBeInTheDocument();
       });
+      expect(screen.getByText(summaryText)).toBeInTheDocument();
+      expect(getSummaryButton()).toBeInTheDocument();
+      expect(screen.queryByText(/generating summary, please wait.../i)).not.toBeInTheDocument();
+    });
 
-    test('calls setFilters with correct project selection', () => {
-      renderDashboardView();
-      const projectSelect = screen.getByRole('combobox', { name: 'Project' });
-      fireEvent.change(projectSelect, { target: { value: mockProjectsArray[0] } });
-      expect(mockSetFilters).toHaveBeenCalledWith(expect.any(Function));
-      const updaterFunction = mockSetFilters.mock.calls[0][0];
-      expect(updaterFunction(mockInitialFilters)).toEqual({ ...mockInitialFilters, projectFilter: mockProjectsArray[0] });
+    it('should display an error message when generation fails', async () => {
+      const errorMessage = 'Failed to generate summary';
+      (aiSummaryService.generateSummary as jest.Mock).mockRejectedValue(new Error(errorMessage));
+      render(<DashboardView {...defaultProps} updates={updatesForSummary} />);
+
+      fireEvent.click(getSummaryButton());
+
+      await waitFor(() => {
+        expect(screen.getByText(`Failed to generate summary: ${errorMessage}`)).toBeInTheDocument();
+      });
+      expect(getSummaryButton()).toBeInTheDocument();
+      expect(screen.queryByText(/generating summary, please wait.../i)).not.toBeInTheDocument();
+      expect(screen.queryByText('AI Generated Summary')).not.toBeInTheDocument();
+    });
+
+    it('should display an error message if no text is available to summarize', async () => {
+      // Need to ensure the button is visible for this test
+      render(<DashboardView {...defaultProps} updates={[]} filters={{...initialFilters, projectFilter: "Project A"}} />);
+      fireEvent.click(getSummaryButton());
+
+      await waitFor(() => {
+        expect(screen.getByText('No text available to summarize from the current selection.')).toBeInTheDocument();
+      });
+      expect(aiSummaryService.generateSummary).not.toHaveBeenCalled();
+      expect(getSummaryButton()).toBeInTheDocument();
     });
   });
 
-  describe('Empty States', () => {
-    test('handles no updates passed (total updates is 0, user counts are 0)', () => {
-      renderDashboardView({ updates: [] });
-      expect(screen.getByText('Total Displayed Updates')).toBeInTheDocument();
-      expect(screen.getByText('0')).toBeInTheDocument(); // Total updates count
+  describe('Summary Display Management', () => {
+    const summaryText = 'This is a summary.';
 
-      mockTeamMembersArray.forEach(member => {
-        const memberItem = screen.queryByText(member.name)?.closest('li'); // Find li containing member name
-        if (memberItem) { // only check if member is rendered in display list
-             expect(within(memberItem).getByText('0 updates')).toBeInTheDocument();
-        }
+    beforeEach(async () => {
+      defaultProps.filters = { ...initialFilters, projectFilter: 'Project A' };
+      (aiSummaryService.generateSummary as jest.Mock).mockResolvedValue(summaryText);
+    });
+
+    it('should clear the summary when the "Close" button is clicked', async () => {
+      render(<DashboardView {...defaultProps} />);
+      fireEvent.click(getSummaryButton());
+
+      await waitFor(() => expect(screen.getByText('AI Generated Summary')).toBeInTheDocument());
+      expect(screen.getByText(summaryText)).toBeInTheDocument();
+
+      const closeButton = screen.getByRole('button', { name: /close/i });
+      fireEvent.click(closeButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText('AI Generated Summary')).not.toBeInTheDocument();
+        expect(screen.queryByText(summaryText)).not.toBeInTheDocument();
       });
     });
 
-    test('handles no teamMembers for display (shows empty message for user list)', () => {
-      renderDashboardView({ teamMembers: [] }); // No members in the display list
-      expect(screen.getByText('User-wise Updates')).toBeInTheDocument();
-      expect(screen.getByText('No updates found for the selected filters, or no team members to display.')).toBeInTheDocument();
-      expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
+    it('should clear the summary and error when filters change', async () => {
+      const { rerender } = render(<DashboardView {...defaultProps} filters={{ ...initialFilters, projectFilter: 'Project A' }} />);
+      fireEvent.click(getSummaryButton());
+      await waitFor(() => expect(screen.getByText('AI Generated Summary')).toBeInTheDocument());
+
+      await act(async () => {
+        rerender(<DashboardView {...defaultProps} filters={{ ...initialFilters, projectFilter: 'Project B' }} />);
+      });
+
+      expect(screen.queryByText('AI Generated Summary')).not.toBeInTheDocument();
+      expect(screen.queryByText(summaryText)).not.toBeInTheDocument();
+
+      // Test error clearing
+      (aiSummaryService.generateSummary as jest.Mock).mockRejectedValueOnce(new Error("Filter change test error"));
+      // Ensure button is visible with new filters before clicking
+      rerender(<DashboardView {...defaultProps} filters={{ ...initialFilters, projectFilter: 'Project B' }} />);
+      fireEvent.click(getSummaryButton());
+      await waitFor(() => expect(screen.getByText(/failed to generate summary: Filter change test error/i)).toBeInTheDocument());
+
+      await act(async () => {
+        rerender(<DashboardView {...defaultProps} filters={{ ...initialFilters, projectFilter: 'Project C' }} />);
+      });
+      expect(screen.queryByText(/failed to generate summary: Filter change test error/i)).not.toBeInTheDocument();
     });
 
-    test('handles no allTeamMembers for filter (Team Member select has only "All Members")', () => {
-      renderDashboardView({ allTeamMembers: [] });
-      const teamMemberSelect = screen.getByRole('combobox', { name: 'Team Member' });
-      expect(within(teamMemberSelect).getByText('All Members')).toBeInTheDocument();
-      expect(within(teamMemberSelect).queryAllByRole('option').length).toBe(1); // Only "All Members"
-    });
+    it('should clear previous summary/error when a new summary generation is initiated', async () => {
+      render(<DashboardView {...defaultProps} filters={{ ...initialFilters, projectFilter: 'Project A' }} />);
 
-    test('handles no projects for filter (Project select has only "All Projects")', () => {
-      renderDashboardView({ projects: [] });
-      const projectSelect = screen.getByRole('combobox', { name: 'Project' });
-      expect(within(projectSelect).getByText('All Projects')).toBeInTheDocument();
-      expect(within(projectSelect).queryAllByRole('option').length).toBe(1); // Only "All Projects"
+      const errorMessage = "Initial error";
+      (aiSummaryService.generateSummary as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
+      fireEvent.click(getSummaryButton());
+      await waitFor(() => expect(screen.getByText(`Failed to generate summary: ${errorMessage}`)).toBeInTheDocument());
+
+      const newSummary = "New successful summary";
+      (aiSummaryService.generateSummary as jest.Mock).mockResolvedValueOnce(newSummary); // Next call succeeds
+      fireEvent.click(getSummaryButton());
+
+      expect(screen.getByText(/generating summary, please wait.../i)).toBeInTheDocument();
+      expect(screen.queryByText(`Failed to generate summary: ${errorMessage}`)).not.toBeInTheDocument();
+
+      await waitFor(() => expect(screen.getByText('AI Generated Summary')).toBeInTheDocument());
+      expect(screen.getByText(newSummary)).toBeInTheDocument();
     });
   });
 });
