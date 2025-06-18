@@ -60,8 +60,11 @@ function AppContent() {
         onRefresh={refreshData}
         totalUpdates={totalUpdates}
         filteredUpdates={updates.length}
-        updates={updates} // Pass the full updates array
-        teamMembers={teamMembers} // Pass teamMembers
+        updates={updates}
+        teamMembers={teamMembers} // Used for DashboardView's teamMembers (display) & allTeamMembers (filter)
+        projects={projects} // Pass projects
+        filters={filters} // Pass filters state
+        setFilters={setFilters} // Pass setFilters function
         accessToken={accessToken}
         selectedChatId={selectedChatId}
         onAuthChange={handleAuthChange}

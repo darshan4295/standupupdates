@@ -3,15 +3,18 @@ import { MessageSquare, Filter, Download, RefreshCw as Refresh, LayoutDashboard 
 import { AuthSection } from './AuthSection';
 import { ChatSelector } from './ChatSelector';
 import DashboardView from './DashboardView'; // Import DashboardView (default import)
-import { StandupUpdate, TeamMember } from '../types'; // Import types
+import { StandupUpdate, TeamMember, FilterOptions } from '../types'; // Import types, including FilterOptions
 
 interface HeaderProps {
   onToggleFilters: () => void;
   onRefresh: () => void;
   totalUpdates: number;
   filteredUpdates: number;
-  updates: StandupUpdate[]; // Add updates prop
-  teamMembers: TeamMember[]; // Add teamMembers prop
+  updates: StandupUpdate[];
+  teamMembers: TeamMember[]; // This will be used for DashboardView's teamMembers (display) and allTeamMembers (filter)
+  projects: string[]; // For DashboardView filters
+  filters: FilterOptions; // For DashboardView filters
+  setFilters: (filters: FilterOptions | ((prevFilters: FilterOptions) => FilterOptions)) => void; // For DashboardView filters
   accessToken?: string;
   selectedChatId?: string;
   onAuthChange?: (isAuthenticated: boolean, accessToken?: string) => void;
@@ -23,8 +26,11 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   totalUpdates,
   filteredUpdates,
-  updates, // Destructure updates
-  teamMembers, // Destructure teamMembers
+  updates,
+  teamMembers, // This is the array from useStandupData
+  projects,
+  filters,
+  setFilters,
   accessToken,
   selectedChatId,
   onAuthChange,
@@ -103,8 +109,15 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
       {showDashboard && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <DashboardView updates={updates} teamMembers={teamMembers} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 bg-gray-100"> {/* Added bg-gray-100 for better contrast if DashboardView itself is white/light */}
+          <DashboardView
+            updates={updates}
+            teamMembers={teamMembers} // For display in user-wise list
+            allTeamMembers={teamMembers} // For populating member filter
+            projects={projects}
+            filters={filters}
+            setFilters={setFilters}
+          />
         </div>
       )}
     </>
