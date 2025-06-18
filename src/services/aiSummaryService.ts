@@ -9,13 +9,39 @@ class AiSummaryService {
     }
 
     private async loadModel(): Promise<void> {
+        console.log('Attempting to load summarization model...');
         try {
-            console.log('Loading summarization model...');
-            this.summarizer = await pipeline('summarization', 'Xenova/distilbart-cnn-6-6');
-            console.log('Summarization model loaded successfully.');
-        } catch (error) {
-            console.error('Error loading summarization model:', error);
-            throw error; // Re-throw to be caught by callers or for global error handling
+            // Specific try-catch for the pipeline call itself
+            try {
+                this.summarizer = await pipeline('summarization', 'Xenova/distilbart-cnn-6-6');
+                console.log('Summarization model loaded successfully.');
+            } catch (pipelineError: any) {
+                if (pipelineError instanceof SyntaxError &&
+                    (pipelineError.message.toLowerCase().includes('json') ||
+                     pipelineError.message.toLowerCase().includes('unexpected token') ||
+                     pipelineError.message.toLowerCase().includes('<!doctype'))) {
+                    const specificMessage = 'Failed to load summarization model: Received an unexpected HTML response or invalid JSON when trying to fetch model data. This might be due to network issues, proxy configurations, or problems at the model source. Please check your network connection and try again.';
+                    console.error(specificMessage, pipelineError);
+                    throw new Error(specificMessage);
+                } else {
+                    // For other errors during pipeline execution
+                    const genericMessage = 'Failed to load summarization model: An unexpected error occurred during model initialization.';
+                    console.error(genericMessage, pipelineError);
+                    throw new Error(genericMessage, { cause: pipelineError });
+                }
+            }
+        } catch (error) { // This outer catch will now catch errors re-thrown from the inner catch
+            console.error('Unhandled error during model loading process:', error);
+            // Re-throw the error caught (which would be one of the new Error instances from inner catch)
+            // or a generic one if something else went wrong at the `loadModel` scope.
+            // To ensure a consistent error type or message prefix from loadModel failures:
+            if (error instanceof Error && error.message.startsWith('Failed to load summarization model:')) {
+                throw error; // It's already one of our specific errors
+            }
+            // Fallback for truly unexpected errors not from pipelineError logic
+            const fallbackMessage = 'Failed to load summarization model: An unknown issue occurred.';
+            console.error(fallbackMessage, error);
+            throw new Error(fallbackMessage, { cause: error });
         }
     }
 

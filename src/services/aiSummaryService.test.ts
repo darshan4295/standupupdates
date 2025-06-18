@@ -206,17 +206,49 @@ describe('AiSummaryService', () => {
         // Wait for the model loading promise to reject
         try {
             await freshAiSummaryService['modelLoadingPromise']; // Accessing private member for test
-        } catch (e) {
-            expect(e).toBe(loadingError);
+        } catch (e: any) {
+            // Check that the error is the wrapped one
+            expect(e.message).toBe('Failed to load summarization model: An unexpected error occurred during model initialization.');
+            expect(e.cause).toBe(loadingError);
         }
 
         expect(pipeline).toHaveBeenCalledTimes(1);
-        expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading summarization model:', loadingError);
+        // Check for the more specific console error now
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to load summarization model: An unexpected error occurred during model initialization.', loadingError);
 
-        // Now, try to generate a summary
+        // Subsequent generateSummary call should still indicate model unavailability
         await expect(freshAiSummaryService.generateSummary('test')).rejects.toThrow('Summarization model is not available.');
 
         consoleErrorSpy.mockRestore();
     });
+
+    it('should handle SyntaxError (e.g. HTML/Invalid JSON response) during model loading', async () => {
+        (pipeline as jest.Mock).mockClear();
+        const syntaxErrorMessage = 'Unexpected token < in JSON at position 0';
+        const syntaxError = new SyntaxError(syntaxErrorMessage);
+        (pipeline as jest.Mock).mockRejectedValue(syntaxError);
+
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+        jest.resetModules();
+        const freshAiSummaryServiceModule = await import('./aiSummaryService');
+        const freshAiSummaryService = freshAiSummaryServiceModule.aiSummaryService;
+
+        const expectedSpecificErrorMessage = 'Failed to load summarization model: Received an unexpected HTML response or invalid JSON when trying to fetch model data. This might be due to network issues, proxy configurations, or problems at the model source. Please check your network connection and try again.';
+
+        try {
+            await freshAiSummaryService['modelLoadingPromise'];
+        } catch (e: any) {
+            expect(e.message).toBe(expectedSpecificErrorMessage);
+        }
+
+        expect(pipeline).toHaveBeenCalledTimes(1);
+        expect(consoleErrorSpy).toHaveBeenCalledWith(expectedSpecificErrorMessage, syntaxError);
+
+        await expect(freshAiSummaryService.generateSummary('test')).rejects.toThrow('Summarization model is not available.');
+
+        consoleErrorSpy.mockRestore();
+    });
+
   });
 });
