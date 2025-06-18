@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MessageSquare, Filter, Download, RefreshCw as Refresh, LayoutDashboard } from 'lucide-react';
 import { AuthSection } from './AuthSection';
 import { ChatSelector } from './ChatSelector';
-import { DashboardView } from './DashboardView'; // Import DashboardView
+import DashboardView from './DashboardView'; // Import DashboardView (default import)
 import { StandupUpdate, TeamMember } from '../types'; // Import types
 
 interface HeaderProps {
