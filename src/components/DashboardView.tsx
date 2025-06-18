@@ -33,35 +33,35 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   return (
-    <div className="bg-gray-100 p-4 md:p-6 min-h-[calc(100vh-4rem)]"> {/* Changed bg-gray-50 to bg-gray-100 for slightly more contrast with white cards, ensured full height */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div className="bg-slate-50 p-4 md:p-6 min-h-[calc(100vh-4rem)]">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
 
         {/* Column 1: Filters */}
-        <div className="lg:col-span-1 bg-white shadow-xl rounded-lg p-6 border border-gray-200 h-fit"> {/* Slightly increased shadow */}
-          <h3 className="text-xl font-semibold text-gray-800 mb-6 border-b border-gray-300 pb-3">Filters</h3> {/* Adjusted text color and margins/padding for heading */}
+        <div className="lg:col-span-1 bg-white shadow-xl rounded-lg p-6 border border-slate-200 h-fit">
+          <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-200 pb-4">Filters</h3>
 
-          <div className="space-y-5"> {/* Added space-y for consistent spacing between filter groups */}
+          <div className="space-y-6">
             {/* Search Filter */}
             <div>
-              <label htmlFor="search-filter" className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+              <label htmlFor="search-filter" className="block text-sm font-semibold text-slate-700 mb-2">Search</label>
               <input
                 type="text"
-                id="search-filter" // Changed id to be more specific
+                id="search-filter"
                 value={filters.searchTerm}
                 onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
                 placeholder="Keywords..."
-                className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-shadow duration-150 ease-in-out hover:shadow-md"
+                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition duration-150 ease-in-out hover:border-sky-400 placeholder-slate-400"
               />
             </div>
 
             {/* Team Members Filter */}
             <div>
-              <label htmlFor="team-members-filter" className="block text-sm font-medium text-gray-700 mb-1">Team Member</label>
+              <label htmlFor="team-members-filter" className="block text-sm font-semibold text-slate-700 mb-2">Team Member</label>
               <select
                 id="team-members-filter"
                 value={filters.selectedMembers.length > 0 ? filters.selectedMembers[0] : ''}
                 onChange={(e) => handleFilterChange('selectedMembers', e.target.value ? [e.target.value] : [])}
-                className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-shadow duration-150 ease-in-out hover:shadow-md"
+                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition duration-150 ease-in-out hover:border-sky-400 placeholder-slate-400"
               >
                 <option value="">All Members</option>
                 {allTeamMembers.map(member => (
@@ -72,35 +72,35 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
             {/* Date Range Filter */}
             <div>
-              <label htmlFor="date-range-start-filter" className="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+              <label htmlFor="date-range-start-filter" className="block text-sm font-semibold text-slate-700 mb-2">Date Range</label>
               <div className="flex space-x-2">
                 <input
                   type="date"
-                  id="date-range-start-filter" // Changed id
+                  id="date-range-start-filter"
                   aria-label="Start date"
                   value={filters.dateRange.start}
                   onChange={(e) => handleFilterChange('dateRange', { ...filters.dateRange, start: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-shadow duration-150 ease-in-out hover:shadow-md"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition duration-150 ease-in-out hover:border-sky-400 placeholder-slate-400"
                 />
                 <input
                   type="date"
-                  id="date-range-end-filter" // Changed id
+                  id="date-range-end-filter"
                   aria-label="End date"
                   value={filters.dateRange.end}
                   onChange={(e) => handleFilterChange('dateRange', { ...filters.dateRange, end: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-shadow duration-150 ease-in-out hover:shadow-md"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition duration-150 ease-in-out hover:border-sky-400 placeholder-slate-400"
                 />
               </div>
             </div>
 
             {/* Project Filter */}
             <div>
-              <label htmlFor="project-filter" className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+              <label htmlFor="project-filter" className="block text-sm font-semibold text-slate-700 mb-2">Project</label>
               <select
                 id="project-filter"
                 value={filters.projectFilter}
                 onChange={(e) => handleFilterChange('projectFilter', e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-shadow duration-150 ease-in-out hover:shadow-md"
+                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition duration-150 ease-in-out hover:border-sky-400 placeholder-slate-400"
               >
                 <option value="">All Projects</option>
                 {projects.map(project => (
@@ -112,32 +112,32 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Column 2, 3 & 4: Main Content Area */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3 space-y-8">
           {/* Total Updates Display */}
-          <div className="bg-white shadow-xl rounded-lg p-6 border border-gray-200"> {/* Slightly increased shadow */}
-            <h3 className="text-xl font-semibold text-blue-700 mb-2">Total Displayed Updates</h3> {/* Increased font size and changed color for emphasis */}
-            <p className="text-6xl font-bold text-blue-600">{totalUpdates}</p> {/* Increased font size */}
+          <div className="bg-gradient-to-br from-sky-500 to-sky-700 text-white shadow-xl rounded-xl p-6">
+            <h3 className="text-xl font-medium text-sky-50 mb-1.5">Total Displayed Updates</h3>
+            <p className="text-5xl sm:text-6xl font-extrabold text-white">{totalUpdates}</p>
           </div>
 
           {/* User-wise Updates */}
-          <div className="bg-white shadow-xl rounded-lg p-6 border border-gray-200"> {/* Slightly increased shadow */}
-            <h3 className="text-xl font-semibold text-gray-800 mb-6 border-b border-gray-300 pb-3">User-wise Updates</h3> {/* Matched Filter heading style */}
+          <div className="bg-white shadow-xl rounded-xl p-6 border border-slate-200">
+            <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-200 pb-4">User-wise Updates</h3>
             {teamMembers.length > 0 ? (
-              <ul className="space-y-4"> {/* Increased spacing in list */}
+              <ul className="space-y-3">
                 {teamMembers.map(member => (
                   <li
                     key={member.id}
-                    className="flex justify-between items-center p-4 bg-gray-100 hover:bg-gray-200 rounded-lg shadow-md border border-gray-200 transition-all duration-150 ease-in-out hover:scale-[1.01]" /* Enhanced list item style */
+                    className="flex justify-between items-center bg-slate-50 hover:bg-sky-100 rounded-lg shadow-sm border border-slate-200/75 transition-all duration-200 ease-in-out hover:shadow-lg hover:border-sky-300 p-4"
                   >
-                    <span className="text-gray-800 font-medium text-md">{member.name}</span> {/* Slightly larger text */}
-                    <span className="text-blue-700 bg-blue-100 px-3 py-1 rounded-full text-sm font-semibold"> {/* Styled badge */}
+                    <span className="text-slate-800 font-semibold text-base">{member.name}</span>
+                    <span className="text-sky-800 bg-sky-200 px-3 py-1 rounded-full text-xs font-bold">
                       {userUpdatesCount[member.name] || 0} updates
                     </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-gray-600 text-center py-4">No updates found for the selected filters, or no team members to display.</p> // Centered and styled empty state
+              <p className="text-slate-500 text-center py-8 text-lg">No updates found for the selected filters, or no team members to display.</p>
             )}
           </div>
         </div>
