@@ -60,6 +60,8 @@ function AppContent() {
         onRefresh={refreshData}
         totalUpdates={totalUpdates}
         filteredUpdates={updates.length}
+        updates={updates} // Pass the full updates array
+        teamMembers={teamMembers} // Pass teamMembers
         accessToken={accessToken}
         selectedChatId={selectedChatId}
         onAuthChange={handleAuthChange}
