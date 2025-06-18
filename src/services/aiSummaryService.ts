@@ -46,15 +46,23 @@ class AiSummaryService {
             });
             // Assuming the result is an array and the summary is in the first element's 'summary_text' field
             // This structure can vary based on the model and library version
-            if (Array.isArray(result) && result.length > 0 && result[0].summary_text) {
+
+            // Check for unexpected HTML response first
+            if (typeof result === 'string' && (result.toLowerCase().startsWith('<!doctype') || result.toLowerCase().startsWith('<html'))) {
+                console.error('Unexpected HTML response from model:', result);
+                throw new Error('Failed to generate summary: Model returned an unexpected HTML response.');
+            }
+
+            // Check for expected array structure
+            if (Array.isArray(result) && result.length > 0 && result[0] && typeof result[0].summary_text === 'string') {
                 console.log('Summary generated successfully.');
                 return result[0].summary_text;
             } else {
-                console.error('Unexpected summary result format:', result);
-                throw new Error('Failed to generate summary due to unexpected result format.');
+                console.error('Unexpected summary result format or missing summary_text:', result);
+                throw new Error('Failed to generate summary due to unexpected result format or missing summary_text.');
             }
         } catch (error) {
-            console.error('Error during summarization:', error);
+            console.error('Error during summarization:', error); // This will catch errors from the checks above or from this.summarizer()
             // Re-throw the error or return a user-friendly message
             throw error;
         }

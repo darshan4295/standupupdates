@@ -112,7 +112,8 @@ describe('DashboardView AI Summary Functionality', () => {
       fireEvent.click(getSummaryButton());
 
       await waitFor(() => {
-        expect(screen.getByText(`Failed to generate summary: ${errorMessage}`)).toBeInTheDocument();
+        // Error message should now be the exact message from the service
+        expect(screen.getByText(errorMessage)).toBeInTheDocument();
       });
       expect(getSummaryButton()).toBeInTheDocument();
       expect(screen.queryByText(/generating summary, please wait.../i)).not.toBeInTheDocument();
@@ -169,16 +170,17 @@ describe('DashboardView AI Summary Functionality', () => {
       expect(screen.queryByText(summaryText)).not.toBeInTheDocument();
 
       // Test error clearing
-      (aiSummaryService.generateSummary as jest.Mock).mockRejectedValueOnce(new Error("Filter change test error"));
+      const filterChangeErrorText = "Filter change test error";
+      (aiSummaryService.generateSummary as jest.Mock).mockRejectedValueOnce(new Error(filterChangeErrorText));
       // Ensure button is visible with new filters before clicking
       rerender(<DashboardView {...defaultProps} filters={{ ...initialFilters, projectFilter: 'Project B' }} />);
       fireEvent.click(getSummaryButton());
-      await waitFor(() => expect(screen.getByText(/failed to generate summary: Filter change test error/i)).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText(filterChangeErrorText)).toBeInTheDocument());
 
       await act(async () => {
         rerender(<DashboardView {...defaultProps} filters={{ ...initialFilters, projectFilter: 'Project C' }} />);
       });
-      expect(screen.queryByText(/failed to generate summary: Filter change test error/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(filterChangeErrorText)).not.toBeInTheDocument();
     });
 
     it('should clear previous summary/error when a new summary generation is initiated', async () => {
@@ -187,14 +189,15 @@ describe('DashboardView AI Summary Functionality', () => {
       const errorMessage = "Initial error";
       (aiSummaryService.generateSummary as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
       fireEvent.click(getSummaryButton());
-      await waitFor(() => expect(screen.getByText(`Failed to generate summary: ${errorMessage}`)).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText(errorMessage)).toBeInTheDocument());
 
       const newSummary = "New successful summary";
       (aiSummaryService.generateSummary as jest.Mock).mockResolvedValueOnce(newSummary); // Next call succeeds
       fireEvent.click(getSummaryButton());
 
       expect(screen.getByText(/generating summary, please wait.../i)).toBeInTheDocument();
-      expect(screen.queryByText(`Failed to generate summary: ${errorMessage}`)).not.toBeInTheDocument();
+      // Previous error message should be cleared
+      expect(screen.queryByText(errorMessage)).not.toBeInTheDocument();
 
       await waitFor(() => expect(screen.getByText('AI Generated Summary')).toBeInTheDocument());
       expect(screen.getByText(newSummary)).toBeInTheDocument();

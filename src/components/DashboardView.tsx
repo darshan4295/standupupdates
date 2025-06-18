@@ -55,7 +55,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       setSummaryResult(summary);
     } catch (error: any) {
       console.error('Error generating summary:', error);
-      setSummaryError(`Failed to generate summary: ${error.message || 'Unknown error'}`);
+      // Set the summaryError state directly with the message from the service
+      setSummaryError(error.message || 'An unknown error occurred during summary generation.');
     } finally {
       setIsGeneratingSummary(false);
     }

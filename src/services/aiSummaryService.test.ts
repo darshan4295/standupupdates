@@ -79,7 +79,42 @@ describe('AiSummaryService', () => {
 
       await Promise.resolve();
 
-      await expect(aiSummaryService.generateSummary(testText)).rejects.toThrow('Failed to generate summary due to unexpected result format.');
+      await expect(aiSummaryService.generateSummary(testText)).rejects.toThrow('Failed to generate summary due to unexpected result format or missing summary_text.');
+    });
+
+    it('should throw an error if the summarizer returns an HTML response', async () => {
+      mockSummarizer.mockResolvedValue('<!doctype html><html><body></body></html>' as any); // Cast as any to bypass type checking for test
+      await Promise.resolve();
+      await expect(aiSummaryService.generateSummary(testText)).rejects.toThrow('Failed to generate summary: Model returned an unexpected HTML response.');
+
+      mockSummarizer.mockResolvedValue('<HTML>content</HTML>' as any);
+      await Promise.resolve();
+      await expect(aiSummaryService.generateSummary(testText)).rejects.toThrow('Failed to generate summary: Model returned an unexpected HTML response.');
+    });
+
+    it('should handle various other unexpected summary result formats', async () => {
+      const testCases = [
+        null,
+        undefined,
+        [],
+        [null],
+        [{}],
+        [{ summary_text: null }],
+        [{ summary_text: 123 }],
+        // @ts-ignore - testing incorrect structure
+        { summary_text: 'this is not in an array'},
+        // @ts-ignore
+        "a plain string not html"
+      ];
+
+      for (const testCase of testCases) {
+        // @ts-ignore
+        mockSummarizer.mockResolvedValue(testCase);
+        await Promise.resolve();
+        await expect(aiSummaryService.generateSummary(testText))
+          .rejects
+          .toThrow('Failed to generate summary due to unexpected result format or missing summary_text.');
+      }
     });
 
     it('should throw an error if the summarizer model is not available after load attempt', async () => {
