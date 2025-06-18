@@ -9,12 +9,25 @@ class AiSummaryService {
     }
 
     private async loadModel(): Promise<void> {
+        // This model is configured to be loaded from a local path: /models/Xenova/distilbart-cnn-6-6/.
+        // The local path is relative to the `public` directory at runtime.
+        //
+        // IMPORTANT:
+        // The actual large ONNX model files (`encoder_model_quantized.onnx` and
+        // `decoder_model_merged_quantized.onnx`) located in
+        // `public/models/Xenova/distilbart-cnn-6-6/onnx/` are placeholders in the repository.
+        // These placeholders MUST be replaced with the full downloaded files (approx. 287MB total)
+        // from Hugging Face for the summarization feature to work.
+        // These .onnx files are intended to be tracked with Git LFS.
+        // See README.md for more details on downloading and placing these files.
+
         console.log('Attempting to load summarization model...');
         try {
             // Specific try-catch for the pipeline call itself
             try {
-                this.summarizer = await pipeline('summarization', 'Xenova/distilbart-cnn-6-6');
-                console.log('Summarization model loaded successfully.');
+                // Load model from local path
+                this.summarizer = await pipeline('summarization', '/models/Xenova/distilbart-cnn-6-6/');
+                console.log('Summarization model loaded successfully from local path.');
             } catch (pipelineError: any) {
                 if (pipelineError instanceof SyntaxError &&
                     (pipelineError.message.toLowerCase().includes('json') ||
