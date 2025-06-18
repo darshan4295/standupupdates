@@ -54,7 +54,7 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-100">
       <Header
         onToggleFilters={handleToggleFilters}
         onRefresh={refreshData}
@@ -82,13 +82,13 @@ function AppContent() {
         />
         
         <main className="flex-1 overflow-y-auto">
-          <div className="max-w-4xl mx-auto p-4 lg:p-6">
+          <div className="max-w-5xl mx-auto p-6 lg:p-8">
             {!accessToken && (
-              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h3 className="text-sm font-medium text-blue-800 mb-2">
+              <div className="mb-6 p-4 bg-sky-100 border border-sky-300 rounded-lg">
+                <h3 className="text-sm font-medium text-sky-700 mb-2">
                   Connect to Microsoft Teams
                 </h3>
-                <p className="text-sm text-blue-700">
+                <p className="text-sm text-sky-600">
                   Sign in with your Microsoft account or provide an access token to access your Teams chats and scan for standup messages.
                   Currently showing sample data.
                 </p>
@@ -96,15 +96,15 @@ function AppContent() {
             )}
 
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mb-6 p-4 bg-red-100 border border-red-400 rounded-lg">
                 <div className="flex items-center">
-                  <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-                  <h3 className="text-sm font-medium text-red-800">Error Loading Data</h3>
+                  <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
+                  <h3 className="text-sm font-medium text-red-700">Error Loading Data</h3>
                 </div>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
+                <p className="text-sm text-red-600 mt-1">{error}</p>
                 <button
                   onClick={refreshData}
-                  className="mt-2 text-sm text-red-800 underline hover:text-red-900"
+                  className="mt-3 text-xs font-medium bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-100 focus:ring-red-500"
                 >
                   Try again
                 </button>
@@ -112,9 +112,9 @@ function AppContent() {
             )}
             
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                <span className="ml-2 text-gray-600">Loading standup updates...</span>
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+                <span className="ml-3 text-slate-700">Loading standup updates...</span>
               </div>
             ) : updates.length === 0 ? (
               <EmptyState

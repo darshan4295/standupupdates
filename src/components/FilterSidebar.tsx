@@ -42,21 +42,21 @@ const ProfileImage: React.FC<{ member: TeamMember }> = ({ member }) => {
   // If no avatar URL is provided or it's the same as fallback, use fallback directly
   if (!member.avatar || member.avatar === fallbackImage || imageError) {
     return (
-      <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-medium">
+      <div className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white text-base font-medium">
         {member.name.charAt(0).toUpperCase()}
       </div>
     );
   }
 
   return (
-    <div className="relative w-6 h-6">
+    <div className="relative w-8 h-8">
       {imageLoading && (
-        <div className="absolute inset-0 rounded-full bg-gray-200 animate-pulse" />
+        <div className="absolute inset-0 rounded-full bg-slate-300 animate-pulse" />
       )}
       <img
         src={member.avatar}
         alt={member.name}
-        className={`w-6 h-6 rounded-full object-cover ${imageLoading ? 'opacity-0' : 'opacity-100'} transition-opacity`}
+        className={`w-8 h-8 rounded-full object-cover ${imageLoading ? 'opacity-0' : 'opacity-100'} transition-opacity`}
         onLoad={handleImageLoad}
         onError={handleImageError}
       />
@@ -125,24 +125,24 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
       )}
       
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-80 bg-white shadow-lg transform transition-transform duration-300 lg:relative lg:translate-x-0 lg:shadow-none lg:border-r lg:border-gray-200 ${
+      <div className={`fixed inset-y-0 left-0 z-50 w-80 bg-slate-50 shadow-xl transform transition-transform duration-300 lg:relative lg:translate-x-0 lg:shadow-none lg:border-r lg:border-slate-200 ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 lg:hidden">
-          <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 lg:hidden">
+          <h2 className="text-xl font-bold text-slate-900">Filters</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full"
+            className="p-2 hover:bg-slate-300 rounded-full"
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="p-4 space-y-6">
+        <div className="p-5 space-y-5">
           {/* Search */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Search className="w-4 h-4 inline mr-2" />
+            <label className="block text-base font-bold text-slate-800 mb-2 flex items-center">
+              <Search className="w-5 h-5 inline mr-2.5" />
               Search Updates
             </label>
             <input
@@ -150,53 +150,53 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
               placeholder="Search in messages..."
               value={filters.searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3.5 py-2.5 border border-slate-400 bg-white rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-600 text-sm transition-colors duration-150 ease-in-out hover:border-sky-500 placeholder-slate-400"
             />
           </div>
 
           {/* Team Members */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Users className="w-4 h-4 inline mr-2" />
+            <label className="block text-base font-bold text-slate-800 mb-2 flex items-center">
+              <Users className="w-5 h-5 inline mr-2.5" />
               Team Members ({teamMembers.length})
             </label>
             {teamMembers.length === 0 ? (
-              <div className="text-sm text-gray-500 p-4 text-center border border-dashed border-gray-300 rounded-md">
-                <User className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+              <div className="text-sm text-slate-500 p-4 text-center border border-dashed border-slate-300 rounded-lg">
+                <User className="w-8 h-8 mx-auto mb-2 text-slate-400" />
                 No team members found
               </div>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+              <div className="space-y-1 max-h-60 overflow-y-auto"> {/* Reduced space-y for tighter list items */}
                 {teamMembers.map((member) => (
                   <label 
                     key={member.id} 
-                    className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
+                    className={`flex items-center space-x-3 cursor-pointer p-2.5 rounded-lg transition-colors duration-150 ease-in-out ${
+                      filters.selectedMembers.includes(member.id) ? 'bg-sky-100 hover:bg-sky-200' : 'hover:bg-slate-200'
+                    }`}
                   >
                     <input
                       type="checkbox"
                       checked={filters.selectedMembers.includes(member.id)}
                       onChange={() => handleMemberToggle(member.id)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 rounded border-slate-400 text-sky-600 focus:ring-2 focus:ring-sky-500 focus:ring-offset-1 focus:ring-offset-white"
                     />
                     
-                    {/* Enhanced Profile Image Component */}
                     <ProfileImage member={member} />
                     
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-slate-800 truncate">
                         {member.name}
                       </p>
-                      <p className="text-xs text-gray-500 truncate">
+                      <p className="text-xs text-slate-500 truncate">
                         {member.email}
                       </p>
                       {member.jobTitle && (
-                        <p className="text-xs text-gray-400 truncate">
+                        <p className="text-xs text-slate-400 truncate">
                           {member.jobTitle}
                         </p>
                       )}
                     </div>
                     
-                    {/* Debug indicator for real vs fallback images */}
                     {process.env.NODE_ENV === 'development' && (
                       <div className="text-xs">
                         {member.avatar && !member.avatar.includes('ui-avatars.com') ? (
@@ -214,14 +214,14 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
           {/* Projects */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <FolderOpen className="w-4 h-4 inline mr-2" />
+            <label className="block text-base font-bold text-slate-800 mb-2 flex items-center">
+              <FolderOpen className="w-5 h-5 inline mr-2.5" />
               Project
             </label>
             <select
               value={filters.projectFilter}
               onChange={(e) => handleProjectChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3.5 py-2.5 border border-slate-400 bg-white rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-600 text-sm transition-colors duration-150 ease-in-out hover:border-sky-500 placeholder-slate-400"
             >
               <option value="">All Projects</option>
               {projects.map((project) => (
@@ -232,8 +232,8 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
           {/* Date Range */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Calendar className="w-4 h-4 inline mr-2" />
+            <label className="block text-base font-bold text-slate-800 mb-2 flex items-center">
+              <Calendar className="w-5 h-5 inline mr-2.5" />
               Date Range
             </label>
             <div className="space-y-2">
@@ -242,30 +242,30 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
                 placeholder="Start date"
                 value={filters.dateRange.start}
                 onChange={(e) => handleDateRangeChange('start', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3.5 py-2.5 border border-slate-400 bg-white rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-600 text-sm transition-colors duration-150 ease-in-out hover:border-sky-500 placeholder-slate-400"
               />
               <input
                 type="date"
                 placeholder="End date"
                 value={filters.dateRange.end}
                 onChange={(e) => handleDateRangeChange('end', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3.5 py-2.5 border border-slate-400 bg-white rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-600 text-sm transition-colors duration-150 ease-in-out hover:border-sky-500 placeholder-slate-400"
               />
             </div>
           </div>
 
           {/* Active Filters Summary */}
           {(filters.searchTerm || filters.selectedMembers.length > 0 || filters.projectFilter || filters.dateRange.start || filters.dateRange.end) && (
-            <div className="p-3 bg-blue-50 rounded-md">
-              <h4 className="text-sm font-medium text-blue-900 mb-2">Active Filters:</h4>
-              <div className="space-y-1 text-xs text-blue-700">
-                {filters.searchTerm && <div>Search: "{filters.searchTerm}"</div>}
+            <div className="p-4 bg-sky-50 border border-sky-200 rounded-lg">
+              <h4 className="text-base font-bold text-sky-900 mb-2.5">Active Filters:</h4>
+              <div className="space-y-1.5 text-sm text-sky-800">
+                {filters.searchTerm && <p>Search: "{filters.searchTerm}"</p>}
                 {filters.selectedMembers.length > 0 && (
-                  <div>Members: {filters.selectedMembers.length} selected</div>
+                  <p>Members: {filters.selectedMembers.length} selected</p>
                 )}
-                {filters.projectFilter && <div>Project: {filters.projectFilter}</div>}
-                {filters.dateRange.start && <div>From: {filters.dateRange.start}</div>}
-                {filters.dateRange.end && <div>To: {filters.dateRange.end}</div>}
+                {filters.projectFilter && <p>Project: {filters.projectFilter}</p>}
+                {filters.dateRange.start && <p>From: {filters.dateRange.start}</p>}
+                {filters.dateRange.end && <p>To: {filters.dateRange.end}</p>}
               </div>
             </div>
           )}
@@ -273,7 +273,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
           {/* Clear Filters */}
           <button
             onClick={clearFilters}
-            className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            className="w-full px-4 py-2.5 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-50 rounded-lg transition-colors duration-150 ease-in-out shadow hover:shadow-md"
           >
             Clear All Filters
           </button>

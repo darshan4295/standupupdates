@@ -49,22 +49,22 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-slate-800 text-white shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
-                <MessageSquare className="w-6 h-6 text-white" />
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center justify-center w-11 h-11 bg-sky-600 rounded-xl">
+                <MessageSquare className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">Teams Message Scanner</h1>
-                <p className="text-sm text-gray-500">
+                <h1 className="text-xl sm:text-2xl font-bold text-white">Teams Message Scanner</h1>
+                <p className="text-xs text-slate-300 tracking-wide">
                   {filteredUpdates} of {totalUpdates} standup updates
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               <ChatSelector
                 accessToken={accessToken}
                 selectedChatId={selectedChatId}
@@ -73,33 +73,33 @@ export const Header: React.FC<HeaderProps> = ({
 
               <button
                 onClick={toggleDashboard} // Toggle dashboard visibility
-                className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-3.5 py-2 rounded-lg text-sm font-semibold bg-slate-700/70 hover:bg-slate-600/90 text-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-sky-400 transition-all duration-150 ease-in-out shadow-sm hover:shadow-md"
               >
-                <LayoutDashboard className="w-4 h-4 mr-2" />
+                <LayoutDashboard className="w-5 h-5 mr-1.5" />
                 {showDashboard ? 'Hide Dashboard' : 'Show Dashboard'}
               </button>
 
               <button
                 onClick={onToggleFilters}
-                className="lg:hidden inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="lg:hidden inline-flex items-center px-3.5 py-2 rounded-lg text-sm font-semibold bg-slate-700/70 hover:bg-slate-600/90 text-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-sky-400 transition-all duration-150 ease-in-out shadow-sm hover:shadow-md"
               >
-                <Filter className="w-4 h-4 mr-2" />
+                <Filter className="w-5 h-5 mr-1.5" />
                 Filters
               </button>
 
               <button
                 onClick={onRefresh}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-3.5 py-2 rounded-lg text-sm font-semibold bg-slate-700/70 hover:bg-slate-600/90 text-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-sky-400 transition-all duration-150 ease-in-out shadow-sm hover:shadow-md"
               >
-                <Refresh className="w-4 h-4 mr-2" />
+                <Refresh className="w-5 h-5 mr-1.5" />
                 Refresh
               </button>
 
               <button
                 onClick={handleExport}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-3.5 py-2 rounded-lg text-sm font-semibold bg-slate-700/70 hover:bg-slate-600/90 text-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-sky-400 transition-all duration-150 ease-in-out shadow-sm hover:shadow-md"
               >
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="w-5 h-5 mr-1.5" />
                 Export
               </button>
 
@@ -109,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
       {showDashboard && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 bg-gray-100"> {/* Added bg-gray-100 for better contrast if DashboardView itself is white/light */}
+        <div className="max-w-full py-4 bg-slate-100 border-b border-slate-300 shadow-inner">
           <DashboardView
             updates={updates}
             teamMembers={teamMembers} // For display in user-wise list
