@@ -20,6 +20,7 @@ export class MessageParser {
   }
 
   // Fetch user details from Microsoft Graph API
+// Fetch user details from Microsoft Graph API
   private static async fetchUserDetails(userId: string): Promise<TeamMember | null> {
     // Check cache first
     if (this.userCache.has(userId)) {
@@ -32,8 +33,8 @@ export class MessageParser {
     }
 
     try {
-      // Fetch user basic info
-      const userResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${userId}`, {
+      // Fetch user basic info with expanded fields
+      const userResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${userId}?$select=id,displayName,mail,userPrincipalName,jobTitle,department,givenName,surname`, {
         headers: {
           'Authorization': `Bearer ${this.accessToken}`,
           'Content-Type': 'application/json'
@@ -41,35 +42,18 @@ export class MessageParser {
       });
 
       if (!userResponse.ok) {
-        throw new Error(`Failed to fetch user: ${userResponse.status}`);
+        console.warn(`Failed to fetch user ${userId}: ${userResponse.status} ${userResponse.statusText}`);
+        return null;
       }
 
       const userData: GraphUser = await userResponse.json();
 
-      // Fetch user photo
-      let photoUrl: string | undefined;
-      try {
-        const photoResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${userId}/photo/$value`, {
-          headers: {
-            'Authorization': `Bearer ${this.accessToken}`
-          }
-        });
-
-        if (photoResponse.ok) {
-          const photoBlob = await photoResponse.blob();
-          photoUrl = URL.createObjectURL(photoBlob);
-        }
-      } catch (photoError) {
-        console.warn(`Failed to fetch photo for user ${userId}:`, photoError);
-        // Fallback to UI Avatars
-        photoUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.displayName)}&background=0078D4&color=fff`;
-      }
-
+      // Create team member with fallback avatar (ProfilePhotoService will handle real photos)
       const teamMember: TeamMember = {
         id: userData.id,
         name: userData.displayName,
-        email: userData.mail || userData.userPrincipalName || `${userData.displayName.toLowerCase().replace(/\s+/g, '.')}@celestialsys.com`,
-        avatar: photoUrl,
+        email: userData.mail || userData.userPrincipalName || `${userData.displayName.toLowerCase().replace(/\s+/g, '.')}@company.com`,
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.displayName)}&background=0078D4&color=fff`,
         jobTitle: userData.jobTitle,
         department: userData.department
       };

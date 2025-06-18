@@ -18,7 +18,7 @@ export const loginRequest: PopupRequest = {
   scopes: [
     'openid',
     'profile',
-    'User.Read',
+    'User.Read',    // Required to read other users' profile photos
     'Chat.Read',
     'ChatMessage.Read'
   ],
