@@ -1,4 +1,12 @@
-import { pipeline } from '@xenova/transformers';
+import { pipeline, env } from '@xenova/transformers';
+
+// Configure Transformers.js to use local models only.
+// This must be set before any pipeline is created or model is loaded.
+env.allowRemoteModels = false;
+// Note: env.localModelPath could also be used, e.g., env.localModelPath = '/models/';
+// However, providing the full path in the pipeline() call, like '/models/Xenova/distilbart-cnn-6-6/',
+// is generally robust, especially when combined with `allowRemoteModels = false`.
+// This path is resolved relative to the server's public root at runtime.
 
 class AiSummaryService {
     private summarizer: any; // Adjust type as per actual library
