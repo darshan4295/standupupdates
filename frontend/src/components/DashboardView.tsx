@@ -1,145 +1,192 @@
 import React from 'react';
-import { StandupUpdate, TeamMember, FilterOptions } from '../types';
+import { StandupAnalysisReport, DailyUpdateReportItem, FilterOptions, TeamMember } from '../types';
+import { AlertTriangle, ArrowRight, CheckCircle2, XCircle, ListChecks, CalendarDays, Users, BarChart3, Repeat } from 'lucide-react';
 
 interface DashboardViewProps {
-  updates: StandupUpdate[];
-  teamMembers: TeamMember[]; // Team members to display updates for
-  allTeamMembers: TeamMember[]; // All team members for filter population
-  projects: string[]; // All unique project names for filter population
-  filters: FilterOptions;
-  setFilters: (filters: FilterOptions | ((prevFilters: FilterOptions) => FilterOptions)) => void;
+  analysisReport: StandupAnalysisReport;
+  filteredDailyUpdateReports: DailyUpdateReportItem[];
+  // Props below are for potential future use if DashboardView needs to manage some filter display or interactions
+  // allTeamMembersForFilter: TeamMember[];
+  // allProjectsForFilter: string[];
+  // filters: FilterOptions;
+  // setFilters: (filters: FilterOptions | ((prevFilters: FilterOptions) => FilterOptions)) => void;
 }
 
-const DashboardView: React.FC<DashboardViewProps> = ({
-  updates,
-  teamMembers,
-  allTeamMembers,
-  projects,
-  filters,
-  setFilters
-}) => {
-  const totalUpdates = updates.length;
+const getTaskCompletionStatusColor = (status: DailyUpdateReportItem['taskCompletionStatus']) => {
+  switch (status) {
+    case 'Yes': return 'text-green-500';
+    case 'No': return 'text-red-500';
+    case 'Not Specified': return 'text-slate-500';
+    default: return 'text-slate-500';
+  }
+};
 
-  const userUpdatesCount = teamMembers.reduce((acc, member) => {
-    acc[member.name] = updates.filter(update => update.member.id === member.id).length;
-    return acc;
-  }, {} as Record<string, number>);
+const getTaskCompletionStatusIcon = (status: DailyUpdateReportItem['taskCompletionStatus']) => {
+  switch (status) {
+    case 'Yes': return <CheckCircle2 className="w-5 h-5 inline mr-1" />;
+    case 'No': return <XCircle className="w-5 h-5 inline mr-1" />;
+    case 'Not Specified': return <ListChecks className="w-5 h-5 inline mr-1" />; // Or a question mark icon
+    default: return <ListChecks className="w-5 h-5 inline mr-1" />;
+  }
+};
 
-  const handleFilterChange = (filterName: keyof FilterOptions, value: any) => {
-    setFilters(prevFilters => ({
-      ...prevFilters,
-      [filterName]: value,
-    }));
-  };
+const DuplicationOverallBadge: React.FC<{ overall: StandupAnalysisReport['duplicationSummary']['overall'] }> = ({ overall }) => {
+  let bgColor = 'bg-slate-200 text-slate-700';
+  if (overall === 'Low') bgColor = 'bg-green-100 text-green-700';
+  else if (overall === 'Medium') bgColor = 'bg-yellow-100 text-yellow-700';
+  else if (overall === 'High') bgColor = 'bg-red-100 text-red-700';
 
   return (
-    <div className="bg-slate-50 p-4 md:p-6 min-h-[calc(100vh-4rem)]">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
+    <span className={`px-3 py-1 text-sm font-semibold rounded-full ${bgColor}`}>
+      {overall}
+    </span>
+  );
+};
 
-        {/* Column 1: Filters */}
-        <div className="lg:col-span-1 bg-white shadow-xl rounded-lg p-6 border border-slate-200 h-fit">
-          <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-200 pb-4">Filters</h3>
 
-          <div className="space-y-6">
-            {/* Search Filter */}
-            <div>
-              <label htmlFor="search-filter" className="block text-sm font-semibold text-slate-700 mb-2">Search</label>
-              <input
-                type="text"
-                id="search-filter"
-                value={filters.searchTerm}
-                onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-                placeholder="Keywords..."
-                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition duration-150 ease-in-out hover:border-sky-400 placeholder-slate-400"
-              />
-            </div>
+const DashboardView: React.FC<DashboardViewProps> = ({
+  analysisReport,
+  filteredDailyUpdateReports,
+}) => {
 
-            {/* Team Members Filter */}
-            <div>
-              <label htmlFor="team-members-filter" className="block text-sm font-semibold text-slate-700 mb-2">Team Member</label>
-              <select
-                id="team-members-filter"
-                value={filters.selectedMembers.length > 0 ? filters.selectedMembers[0] : ''}
-                onChange={(e) => handleFilterChange('selectedMembers', e.target.value ? [e.target.value] : [])}
-                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition duration-150 ease-in-out hover:border-sky-400 placeholder-slate-400"
-              >
-                <option value="">All Members</option>
-                {allTeamMembers.map(member => (
-                  <option key={member.id} value={member.id}>{member.name}</option>
-                ))}
-              </select>
-            </div>
+  if (!analysisReport) {
+    // This case should ideally be handled by App.tsx's loading/error states
+    return <div className="p-6 text-center text-slate-500">No analysis report available.</div>;
+  }
 
-            {/* Date Range Filter */}
-            <div>
-              <label htmlFor="date-range-start-filter" className="block text-sm font-semibold text-slate-700 mb-2">Date Range</label>
-              <div className="flex space-x-2">
-                <input
-                  type="date"
-                  id="date-range-start-filter"
-                  aria-label="Start date"
-                  value={filters.dateRange.start}
-                  onChange={(e) => handleFilterChange('dateRange', { ...filters.dateRange, start: e.target.value })}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition duration-150 ease-in-out hover:border-sky-400 placeholder-slate-400"
-                />
-                <input
-                  type="date"
-                  id="date-range-end-filter"
-                  aria-label="End date"
-                  value={filters.dateRange.end}
-                  onChange={(e) => handleFilterChange('dateRange', { ...filters.dateRange, end: e.target.value })}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition duration-150 ease-in-out hover:border-sky-400 placeholder-slate-400"
-                />
-              </div>
-            </div>
+  const { analysisDateRange, duplicationSummary } = analysisReport;
 
-            {/* Project Filter */}
-            <div>
-              <label htmlFor="project-filter" className="block text-sm font-semibold text-slate-700 mb-2">Project</label>
-              <select
-                id="project-filter"
-                value={filters.projectFilter}
-                onChange={(e) => handleFilterChange('projectFilter', e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition duration-150 ease-in-out hover:border-sky-400 placeholder-slate-400"
-              >
-                <option value="">All Projects</option>
-                {projects.map(project => (
-                  <option key={project} value={project}>{project}</option>
-                ))}
-              </select>
-            </div>
+  return (
+    <div className="space-y-6 md:space-y-8 p-1"> {/* Reduced padding as App.tsx has it */}
+
+      {/* Header Row: Date Range and Overall Duplication */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white shadow-lg rounded-xl p-6 border border-slate-200">
+          <div className="flex items-center text-slate-700 mb-2">
+            <CalendarDays className="w-6 h-6 mr-3 text-sky-600" />
+            <h2 className="text-xl font-semibold">Analysis Period</h2>
           </div>
+          <p className="text-2xl font-bold text-sky-700">{analysisDateRange || 'N/A'}</p>
         </div>
 
-        {/* Column 2, 3 & 4: Main Content Area */}
-        <div className="lg:col-span-3 space-y-8">
-          {/* Total Updates Display */}
-          <div className="bg-gradient-to-br from-sky-500 to-sky-700 text-white shadow-xl rounded-xl p-6">
-            <h3 className="text-xl font-medium text-sky-50 mb-1.5">Total Displayed Updates</h3>
-            <p className="text-5xl sm:text-6xl font-extrabold text-white">{totalUpdates}</p>
+        <div className="bg-white shadow-lg rounded-xl p-6 border border-slate-200">
+          <div className="flex items-center text-slate-700 mb-2">
+            <BarChart3 className="w-6 h-6 mr-3 text-amber-600" />
+            <h2 className="text-xl font-semibold">Overall Update Duplication</h2>
           </div>
+          <DuplicationOverallBadge overall={duplicationSummary.overall} />
+        </div>
+      </div>
 
-          {/* User-wise Updates */}
-          <div className="bg-white shadow-xl rounded-xl p-6 border border-slate-200">
-            <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-200 pb-4">User-wise Updates</h3>
-            {teamMembers.length > 0 ? (
-              <ul className="space-y-3">
-                {teamMembers.map(member => (
-                  <li
-                    key={member.id}
-                    className="flex justify-between items-center bg-slate-50 hover:bg-sky-100 rounded-lg shadow-sm border border-slate-200/75 transition-all duration-200 ease-in-out hover:shadow-lg hover:border-sky-300 p-4"
-                  >
-                    <span className="text-slate-800 font-semibold text-base">{member.name}</span>
-                    <span className="text-sky-800 bg-sky-200 px-3 py-1 rounded-full text-xs font-bold">
-                      {userUpdatesCount[member.name] || 0} updates
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-slate-500 text-center py-8 text-lg">No updates found for the selected filters, or no team members to display.</p>
-            )}
+      {/* Duplication Summary Details */}
+      {duplicationSummary.details && duplicationSummary.details.length > 0 && (
+        <div className="bg-white shadow-lg rounded-xl p-6 border border-slate-200">
+          <div className="flex items-center text-slate-700 mb-4">
+            <Users className="w-6 h-6 mr-3 text-purple-600" />
+            <h2 className="text-xl font-semibold">Duplication Details by Employee</h2>
           </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Repeated Updates</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Max Consecutive</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {duplicationSummary.details.map((detail) => (
+                  <tr key={detail.employeeName} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{detail.employeeName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{detail.repeatedUpdateCount}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{detail.consecutiveRepeats}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Daily Update Reports Section */}
+      <div>
+        <h2 className="text-2xl font-bold text-slate-800 mb-2 mt-8">Daily Standup Reports</h2>
+        <p className="text-sm text-slate-500 mb-6">Displaying {filteredDailyUpdateReports.length} of {analysisReport.dailyUpdateReports.length} total reports for the period.</p>
+
+        {filteredDailyUpdateReports.length === 0 && (
+           <div className="bg-white shadow-md rounded-lg p-12 text-center border border-slate-200">
+            <ListChecks className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500 text-lg">No standup reports match your current filters.</p>
+            <p className="text-sm text-slate-400 mt-1">Try adjusting or clearing the filters.</p>
+          </div>
+        )}
+
+        <div className="space-y-6">
+          {filteredDailyUpdateReports.map((report) => (
+            <div key={report.messageId} className="bg-white shadow-lg rounded-xl border border-slate-200 overflow-hidden transition-all hover:shadow-2xl">
+              <div className={`px-6 py-4 border-b border-slate-200 ${report.isHighlySimilarToPrevious ? 'bg-yellow-50' : 'bg-slate-50'}`}>
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold text-sky-700">{report.employeeName}</h3>
+                    <p className="text-xs text-slate-500">
+                      {report.createdDate} {report.projectTeam && `| ${report.projectTeam}`}
+                    </p>
+                  </div>
+                  {report.isHighlySimilarToPrevious && (
+                    <span title="This update is highly similar to the previous one from this employee" className="mt-2 sm:mt-0 flex items-center text-xs bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full font-medium">
+                      <AlertTriangle className="w-4 h-4 mr-1.5" />
+                      Highly Similar to Previous
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                <div>
+                  <h4 className="font-semibold text-slate-700 mb-2 text-sm">Accomplishments Yesterday:</h4>
+                  {report.accomplishments.length > 0 ? (
+                    <ul className="list-disc list-inside text-sm text-slate-600 space-y-1">
+                      {report.accomplishments.map((item, idx) => <li key={idx}>{item}</li>)}
+                    </ul>
+                  ) : <p className="text-sm text-slate-500 italic">Not specified.</p>}
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-slate-700 mb-2 text-sm">Plans for Today:</h4>
+                  {report.plannedTasksToday.length > 0 ? (
+                    <ul className="list-disc list-inside text-sm text-slate-600 space-y-1">
+                      {report.plannedTasksToday.map((item, idx) => <li key={idx}>{item}</li>)}
+                    </ul>
+                  ) : <p className="text-sm text-slate-500 italic">Not specified.</p>}
+                </div>
+
+                <div className="md:col-span-2 mt-2">
+                  <h4 className="font-semibold text-slate-700 mb-2 text-sm">Task Completion (Yesterday's Plans):</h4>
+                  <p className={`text-sm ${getTaskCompletionStatusColor(report.taskCompletionStatus)}`}>
+                    {getTaskCompletionStatusIcon(report.taskCompletionStatus)}
+                    {report.taskCompletionStatus}
+                  </p>
+                </div>
+
+                {report.taskCompletionStatus === 'No' && (
+                  <>
+                    <div>
+                      <h4 className="font-semibold text-slate-700 mt-2 mb-1 text-sm">Carried Forward:</h4>
+                      {report.carriedForwardTasks.length > 0 ? (
+                        <ul className="list-disc list-inside text-sm text-slate-600 space-y-1">
+                          {report.carriedForwardTasks.map((item, idx) => <li key={idx}>{item}</li>)}
+                        </ul>
+                      ) : <p className="text-sm text-slate-500 italic">No specific tasks listed.</p>}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-slate-700 mt-2 mb-1 text-sm">Reason for Carry Forward:</h4>
+                      <p className="text-sm text-slate-600">{report.carryForwardReason || <span className="italic">Not specified.</span>}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
