@@ -156,11 +156,9 @@ function AppContent() {
 }
 
 // Helper function to check if any filters are active
-const filtersApplied = (filters: typeof useStandupData extends (props: any) => { filters: infer T } ? T : never): boolean => {
+const filtersApplied = (filters: ReturnType<typeof useStandupData>['filters']): boolean => {
   return !!filters.searchTerm || filters.selectedMembers.length > 0 || !!filters.dateRange.start || !!filters.dateRange.end || !!filters.projectFilter;
 };
-
-// Removed erroneous duplicate App function declaration
 
 function App() {
   return (
