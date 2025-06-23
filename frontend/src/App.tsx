@@ -1,4 +1,3 @@
-import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import React, { useState, useEffect, useCallback } from 'react'; // Removed useRef, useLayoutEffect
 import { MsalProvider } from '@azure/msal-react';
 import { PublicClientApplication } from '@azure/msal-browser';
