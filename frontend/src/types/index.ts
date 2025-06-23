@@ -39,6 +39,20 @@ export interface StandupAnalysisReport {
   analysisDateRange: string; // YYYY-MM-DD to YYYY-MM-DD
   dailyUpdateReports: DailyUpdateReportItem[];
   duplicationSummary: DuplicationSummary;
+  message?: string; // Optional message, e.g., if no messages were analyzed
+}
+
+// Information about a chat member, typically from Graph API /members endpoint
+export interface ChatMemberInfo {
+  id: string; // User's AAD ID (userId from Graph)
+  name: string; // displayName from Graph
+  email?: string | null; // email from Graph
+}
+
+// New overall response structure from the backend API /api/analyze-chat
+export interface CombinedAnalysisResponse {
+  standupAnalysis: StandupAnalysisReport;
+  allChatMembers: ChatMemberInfo[];
 }
 
 // --- End of New Types ---

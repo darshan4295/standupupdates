@@ -100,6 +100,40 @@ async function fetchTeamsMessagesFromGraph(chatId, accessToken) {
   }
 }
 
+// Helper function to fetch chat members from Microsoft Graph API
+async function fetchChatMembersFromGraph(chatId, accessToken) {
+  if (!accessToken) {
+    throw new Error('Microsoft Graph API access token is required for fetching chat members.');
+  }
+  const graphApiUrl = `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/members`;
+  console.log(`Fetching chat members from Graph API: ${graphApiUrl}`);
+
+  try {
+    const response = await axios.get(graphApiUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    // Graph API /members returns an array of conversationMember objects
+    // We need to map them to a simpler structure, e.g., { id: userId, name: displayName, email: email }
+    const members = response.data.value || [];
+    return members.map(member => ({
+      id: member.userId, // Use the Azure AD User ID
+      name: member.displayName,
+      email: member.email || null // Email might not always be present
+    }));
+  } catch (error) {
+    console.error('Error fetching chat members from Graph API:', error.response ? error.response.data : error.message);
+    if (error.response && error.response.data && error.response.data.error) {
+        const graphError = error.response.data.error;
+        throw new Error(`Graph API Error fetching members: ${graphError.code} - ${graphError.message}`);
+    }
+    throw new Error('Failed to fetch chat members from Microsoft Graph API.');
+  }
+}
+
+
 // Routes
 app.get('/', (req, res) => {
     res.json({
@@ -194,61 +228,76 @@ app.post('/api/analyze-chat', async (req, res) => {
             return res.status(401).json({ error: 'Missing required field: accessToken for fetching Teams messages.' });
         }
 
-        // --- Step 1: Fetch Teams Messages ---
+        // --- Step 1a: Fetch All Chat Members ---
+        const allChatMembers = await fetchChatMembersFromGraph(chatId, accessToken);
+
+        // --- Step 1b: Fetch Teams Messages ---
         const teamsMessages = await fetchTeamsMessagesFromGraph(chatId, accessToken);
 
         if (!teamsMessages || teamsMessages.length === 0) {
-          // If no messages are found, we can either send an empty array to the AI
-          // or return a specific response. For now, let's send to AI, it might return an empty report.
-          console.log(`No messages found for chat ${chatId} or failed to fetch.`);
-          // Optionally, return a custom response here if preferred over sending empty data to AI.
-          // return res.status(200).json({ success: true, data: { analysisDateRange: "N/A", dailyUpdateReports: [], duplicationSummary: { overall: "Low", details: [] } }, message: "No messages found in chat." });
+          console.log(`No messages found for chat ${chatId} to analyze. Still returning all members.`);
         }
 
-        // --- Step 2: Prepare data for Deepseek AI ---
-        // The prompt expects a JSON array of Teams messages.
-        const messagesForAI = [
-            { role: 'system', content: STANDUP_ANALYSIS_SYSTEM_PROMPT },
-            { role: 'user', content: JSON.stringify(teamsMessages) } // Send actual fetched messages as JSON string
-        ];
+        // --- Step 2: Prepare data for Deepseek AI (only if there are messages) ---
+        let standupAnalysisData = {
+            analysisDateRange: "N/A",
+            dailyUpdateReports: [],
+            duplicationSummary: { overall: "Low", details: [] },
+            message: "No messages found in chat to analyze."
+        };
+        let aiUsage = null;
 
-        // --- Step 3: Call Deepseek API ---
-        console.log(`Sending ${teamsMessages.length} messages to Deepseek for analysis.`);
-        const aiApiResponse = await axios.post(`${OPENAI_CONFIG.baseURL}/chat/completions`, {
-            model: 'deepseek-chat', // Or 'deepseek-coder' if more appropriate and available
-            messages: messagesForAI,
-            response_format: { type: 'json_object' }
-        }, {
-            headers: {
-                'Authorization': `Bearer ${OPENAI_CONFIG.apiKey}`,
-                'Content-Type': 'application/json'
+        if (teamsMessages && teamsMessages.length > 0) {
+            const messagesForAI = [
+                { role: 'system', content: STANDUP_ANALYSIS_SYSTEM_PROMPT },
+                { role: 'user', content: JSON.stringify(teamsMessages) }
+            ];
+
+            // --- Step 3: Call Deepseek API ---
+            console.log(`Sending ${teamsMessages.length} messages to Deepseek for analysis.`);
+            const aiApiResponse = await axios.post(`${OPENAI_CONFIG.baseURL}/chat/completions`, {
+                model: 'deepseek-chat',
+                messages: messagesForAI,
+                response_format: { type: 'json_object' }
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${OPENAI_CONFIG.apiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const aiRawResponse = aiApiResponse.data;
+            if (!aiRawResponse.choices || !aiRawResponse.choices[0] || !aiRawResponse.choices[0].message || !aiRawResponse.choices[0].message.content) {
+                console.error('Deepseek API response format unexpected:', aiRawResponse);
+                // Don't throw, but use default standupAnalysisData and log error
+                standupAnalysisData.message = "Error parsing AI response for standup analysis.";
+            } else {
+                 standupAnalysisData = JSON.parse(aiRawResponse.choices[0].message.content);
+                 aiUsage = aiRawResponse.usage;
             }
-        });
-
-        const aiRawResponse = aiApiResponse.data;
-        if (!aiRawResponse.choices || !aiRawResponse.choices[0] || !aiRawResponse.choices[0].message || !aiRawResponse.choices[0].message.content) {
-            console.error('Deepseek API response format unexpected:', aiRawResponse);
-            throw new Error('Failed to parse AI response: Unexpected format.');
         }
 
-        const analyzedData = JSON.parse(aiRawResponse.choices[0].message.content);
+        // Combine analysis with all chat members
+        const responseData = {
+            standupAnalysis: standupAnalysisData,
+            allChatMembers: allChatMembers
+        };
 
         res.json({
             success: true,
-            data: analyzedData,
-            usage: aiRawResponse.usage
+            data: responseData,
+            usage: aiUsage // This will be null if Deepseek wasn't called
         });
 
     } catch (error) {
         console.error('Error in /api/analyze-chat:', error.message);
-        // Check if the error came from fetchTeamsMessagesFromGraph (it throws a custom error message)
-        if (error.message.startsWith('Graph API Error:') || error.message === 'Failed to fetch messages from Microsoft Graph API.' || error.message === 'Microsoft Graph API access token is required.') {
-            // Specific error from Graph API interaction
-            res.status(400).json({ // Could be 400, 401, 403, 404 depending on actual Graph error, simplifying to 400 for client
+        // Check if the error came from Graph API calls
+        if (error.message.startsWith('Graph API Error') || error.message.startsWith('Failed to fetch') || error.message.includes('access token is required')) {
+            res.status(400).json({
                 error: 'Microsoft Graph API Error',
                 message: error.message
             });
-        } else if (error.response) { // Error from Axios (likely Deepseek API)
+        } else if (error.response) { // Error from Axios (Deepseek API)
             // Deepseek API error
             console.error('Deepseek API Error Details:', error.response.data);
             res.status(error.response.status || 500).json({

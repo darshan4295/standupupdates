@@ -1,18 +1,17 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { StandupAnalysisReport, DailyUpdateReportItem, FilterOptions, TeamMember } from '../types';
-// import { TeamsApiService } from '../services/teamsApiService'; // May not be needed directly here anymore
+import { StandupAnalysisReport, DailyUpdateReportItem, FilterOptions, TeamMember, CombinedAnalysisResponse, ChatMemberInfo } from '../types';
 import { ProfilePhotoService } from '../services/ProfilePhotoService';
 import { mockTeamMembers } from '../services/mockData'; // For potential avatar enrichment
 
 interface UseStandupDataProps {
-  accessToken?: string; // May be needed for the backend API call
+  accessToken?: string;
   chatId?: string;
 }
 
-// Define the expected structure of the API response
-interface ApiResponse {
+// Define the expected structure of the API response from /api/analyze-chat
+interface BackendApiResponse {
   success: boolean;
-  data?: StandupAnalysisReport;
+  data?: CombinedAnalysisResponse; // This now holds both analysis and allChatMembers
   usage?: {
     prompt_tokens: number;
     completion_tokens: number;
@@ -25,10 +24,10 @@ interface ApiResponse {
 
 export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}) => {
   const [analysisReport, setAnalysisReport] = useState<StandupAnalysisReport | null>(null);
+  const [allChatMembersState, setAllChatMembersState] = useState<ChatMemberInfo[]>([]); // New state for all chat members
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
-  // const [nextPageSkipToken, setNextPageSkipToken] = useState<string | undefined>(undefined); // Removed, report is a single object
   const [filters, setFilters] = useState<FilterOptions>({
     searchTerm: '',
     selectedMembers: [], // These will now filter by employeeName (string)
@@ -49,13 +48,14 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
         setAnalysisReport(null);
         return;
       }
-      console.log('useStandupData: Loading analysis data...', { activeChatId, hasToken: !!accessToken });
+      console.log('useStandupData: Loading analysis data and all members...', { activeChatId, hasToken: !!accessToken });
       setLoading(true);
       setError(null);
       setAnalysisReport(null);
+      setAllChatMembersState([]); // Reset all chat members state
       
       try {
-        // Set access token for profile photo service if it's used later
+        // Set access token for profile photo service
         if (accessToken) {
           ProfilePhotoService.setAccessToken(accessToken);
         }
@@ -77,20 +77,22 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
           throw new Error(errorData.message || `Server responded with ${serverResponse.status}`);
         }
 
-        const responseData: ApiResponse = await serverResponse.json();
+        const responseData: BackendApiResponse = await serverResponse.json(); // Use BackendApiResponse type
 
         if (responseData.success && responseData.data) {
-          setAnalysisReport(responseData.data);
-          console.log('useStandupData: Received analysis report:', responseData.data);
+          setAnalysisReport(responseData.data.standupAnalysis);
+          setAllChatMembersState(responseData.data.allChatMembers || []); // Set all chat members
+          console.log('useStandupData: Received combined analysis:', responseData.data);
           console.log('useStandupData: AI Usage:', responseData.usage);
         } else {
-          throw new Error(responseData.message || responseData.error || 'Failed to get analysis data from server');
+          throw new Error(responseData.message || responseData.error || 'Failed to get combined analysis data from server');
         }
         
       } catch (err) {
-        console.error('useStandupData: Failed to load standup analysis data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load analysis data');
+        console.error('useStandupData: Failed to load combined standup analysis data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load combined analysis data');
         setAnalysisReport(null);
+        setAllChatMembersState([]);
       } finally {
         setLoading(false);
       }
@@ -118,7 +120,7 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
         if (!matchesSearch) return false;
       }
 
-      // Member filter (now by employeeName)
+      // Member filter (now by employeeName, which is member.name from ChatMemberInfo)
       if (filters.selectedMembers.length > 0 && !filters.selectedMembers.includes(report.employeeName)) {
         return false;
       }
@@ -152,72 +154,29 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
     return Array.from(projectSet).sort();
   }, [analysisReport]);
 
-  // Get team members from the analysis report (employeeName)
-  // This will be a list of unique employee names.
-  // For richer TeamMember objects (with ID, email, avatar), we might need another source or a mapping.
-  // For now, creating simple TeamMember objects from names.
+  // teamMembersForFilter: Derived from allChatMembersState for populating the filter sidebar
   const teamMembersForFilter = useMemo(() => {
-    if (!analysisReport?.dailyUpdateReports && !analysisReport?.duplicationSummary?.details) return [];
+    if (!allChatMembersState || allChatMembersState.length === 0) return [];
+    
+    return allChatMembersState.map(member => ({
+      id: member.id, // This is the AAD User ID from Graph /members
+      name: member.name,
+      email: member.email || `${member.name.toLowerCase().replace(/\s+/g, '.')}@example.com`, // Use real email or fallback
+      avatar: ProfilePhotoService.getFallbackAvatar(member.name) // Start with fallback
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [allChatMembersState]);
 
-    const memberNames = new Set<string>();
-    analysisReport?.dailyUpdateReports?.forEach(report => memberNames.add(report.employeeName));
-    analysisReport?.duplicationSummary?.details?.forEach(detail => memberNames.add(detail.employeeName));
-
-    // Create TeamMember like objects for filter consistency. ID can be the name for now.
-    return Array.from(memberNames).sort().map(name => ({
-      id: name, // Using name as ID for now, this might need refinement
-      name: name,
-      email: `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`, // Placeholder email
-      avatar: ProfilePhotoService.getFallbackAvatar(name) // Use fallback avatar
-    }));
-  }, [analysisReport]);
-
-  // This is the old teamMembers structure. We need to adapt it.
+  // teamMembers: These are the TeamMember objects that can be enhanced with real photos.
+  // Derived from allChatMembersState, as this list is the source of truth for members.
   const teamMembers = useMemo(() => {
-    const membersMap = new Map<string, TeamMember>();
-    
-    // Extract employee names from daily reports and duplication summary
-    const employeeNames = new Set<string>();
-    analysisReport?.dailyUpdateReports?.forEach(report => {
-      if (report.employeeName) employeeNames.add(report.employeeName);
-    });
-    analysisReport?.duplicationSummary?.details?.forEach(detail => {
-      if (detail.employeeName) employeeNames.add(detail.employeeName);
-    });
-
-    Array.from(employeeNames).forEach(name => {
-      // For now, we only have names. We'll create a basic TeamMember object.
-      // ID and email will be derived or mocked. Avatars can use fallbacks.
-      // A more robust solution would involve fetching full member details from Graph API
-      // or having a mapping if the AI provides user IDs.
-      const memberId = name.toLowerCase().replace(/\s+/g, '_'); // Simple ID from name
-      membersMap.set(memberId, {
-        id: memberId,
-        name: name,
-        email: `${memberId}@example.com`, // Mock email
-        avatar: ProfilePhotoService.getFallbackAvatar(name) // Fallback avatar
-      });
-    });
-    
-    // Merge with mock members for additional data if available
-    if (mockTeamMembers && Array.isArray(mockTeamMembers)) {
-      mockTeamMembers.forEach(mockMember => {
-        if (mockMember && mockMember.id && membersMap.has(mockMember.id)) {
-          const existingMember = membersMap.get(mockMember.id)!;
-          membersMap.set(mockMember.id, {
-            ...existingMember,
-            // Only use mock avatar if we don't have a real one
-            avatar: existingMember.avatar?.includes('ui-avatars.com') ? 
-              (mockMember.avatar || existingMember.avatar) : existingMember.avatar,
-            jobTitle: existingMember.jobTitle || mockMember.jobTitle,
-            department: existingMember.department || mockMember.department
-          });
-        }
-      });
-    }
-    
-    return Array.from(membersMap.values());
-  }, [analysisReport]); // Changed dependency from updates to analysisReport
+    // This directly uses the structure from teamMembersForFilter,
+    // as it's already mapped to TeamMember type.
+    // The `enhancedTeamMembers` useEffect will then try to fetch real photos for these.
+    // The mockTeamMembers merge logic is removed here; if needed for job titles/departments,
+    // it should be done more carefully, perhaps in enhanceWithRealPhotos or by matching on email/name,
+    // as IDs from mockTeamMembers might not match AAD User IDs from allChatMembersState.
+    return teamMembersForFilter;
+  }, [teamMembersForFilter]);
 
   // Enhanced team members with real profile photos
   // This section needs review. If we only have employee names from the AI,
