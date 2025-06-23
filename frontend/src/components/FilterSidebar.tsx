@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Calendar, Users, FolderOpen, X, User } from 'lucide-react';
+import { Search, Filter, Calendar, Users, FolderOpen, X, User, CheckSquare, Square } from 'lucide-react'; // Added CheckSquare, Square
 import { FilterOptions, TeamMember } from '../types';
 
 interface FilterSidebarProps {
@@ -157,6 +157,10 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     onFiltersChange({ ...filters, projectFilter: project });
   };
 
+  const handleApprovalStatusChange = (status: FilterOptions['approvalStatus']) => {
+    onFiltersChange({ ...filters, approvalStatus: status });
+  };
+
   const clearFilters = () => {
     // When clearing filters, reset to "Today"
     const today = getFormattedDate(new Date());
@@ -164,7 +168,8 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
       searchTerm: '',
       selectedMembers: [],
       dateRange: { start: today, end: today },
-      projectFilter: ''
+      projectFilter: '',
+      approvalStatus: 'all' // Reset approval status
     });
     setSelectedDateFilterType('today');
   };
@@ -282,6 +287,29 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
             </select>
           </div>
 
+          {/* Approval Status Filter */}
+          <div>
+            <label className="block text-base font-bold text-slate-800 mb-2 flex items-center">
+              <CheckSquare className="w-5 h-5 inline mr-2.5" />
+              Approval Status
+            </label>
+            <div className="flex space-x-2">
+              {(['all', 'approved', 'unapproved'] as const).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => handleApprovalStatusChange(status)}
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    filters.approvalStatus === status
+                      ? 'bg-sky-600 text-white'
+                      : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                  }`}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Date Range */}
           <div>
             <label className="block text-base font-bold text-slate-800 mb-2 flex items-center">
@@ -336,6 +364,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
                   <p>Members: {filters.selectedMembers.length} selected</p>
                 )}
                 {filters.projectFilter && <p>Project: {filters.projectFilter}</p>}
+                {filters.approvalStatus && filters.approvalStatus !== 'all' && <p>Approval: {filters.approvalStatus.charAt(0).toUpperCase() + filters.approvalStatus.slice(1)}</p>}
                 {filters.dateRange.start && <p>From: {filters.dateRange.start}</p>}
                 {filters.dateRange.end && <p>To: {filters.dateRange.end}</p>}
               </div>

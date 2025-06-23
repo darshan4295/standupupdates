@@ -39,6 +39,7 @@ If "No", identify "what is being carried forward" (as a list of tasks).
 If "No", identify the "reason" tasks were carried forward.
 Planned Tasks Today: Summarize "What do you plan to work on today?" into a precise list of upcoming tasks (2-4 bullet points).
 Duplication Check: Define isHighlySimilarToPrevious as true if the combined "Accomplishments" and "Planned Tasks Today" sections of this message are semantically and structurally (after HTML cleaning) >90% identical to the immediately preceding message from the same employee. Otherwise, false. This flag helps identify boilerplate or unvaried updates.
+Approval Status: Check the 'reactions' array for each message. If a reaction with 'reactionType' of 'like' (case-insensitive) exists, extract the 'displayName' from the 'user' object of that reaction. Set 'approvedBy' to this 'displayName'. If multiple 'like' reactions exist, use the first one found. If no 'like' reaction is found, set 'approvedBy' to null.
 
 Output the results as a single JSON object with the following structure:
 {
@@ -54,7 +55,8 @@ Output the results as a single JSON object with the following structure:
       "carriedForwardTasks": ["string"],
       "carryForwardReason": "string | null",
       "plannedTasksToday": ["string"],
-      "isHighlySimilarToPrevious": true | false
+      "isHighlySimilarToPrevious": true | false,
+      "approvedBy": "string | null" // Name of the user who liked the message
     }
   ],
   "duplicationSummary": {
