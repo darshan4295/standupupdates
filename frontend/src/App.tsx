@@ -160,9 +160,7 @@ const filtersApplied = (filters: typeof useStandupData extends (props: any) => {
   return !!filters.searchTerm || filters.selectedMembers.length > 0 || !!filters.dateRange.start || !!filters.dateRange.end || !!filters.projectFilter;
 };
 
-function App() {
-  );
-}
+// Removed erroneous duplicate App function declaration
 
 function App() {
   return (
