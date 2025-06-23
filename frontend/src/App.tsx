@@ -31,6 +31,7 @@ function AppContent() {
     projects,
     refreshData,
     clearFilters,
+    membersWithoutUpdates, // Destructure the new data
     // fetchMoreMessages and hasMoreMessages are removed from useStandupData
   } = useStandupData({ accessToken, chatId: selectedChatId });
 
@@ -141,11 +142,13 @@ function AppContent() {
               <DashboardView
                 analysisReport={analysisReport}
                 filteredDailyUpdateReports={dailyUpdateReports}
-                allTeamMembersForFilter={allTeamMembersForFilter}
-                allProjectsForFilter={projects}
-                filters={filters}
-                setFilters={setFilters}
+                membersWithoutUpdates={membersWithoutUpdates} // Pass the new data
                 // photoLoading={photoLoading} // Pass if DashboardView needs it
+                // Props below were previously passed but are not used by DashboardView based on its current definition
+                // allTeamMembersForFilter={allTeamMembersForFilter}
+                // allProjectsForFilter={projects}
+                // filters={filters}
+                // setFilters={setFilters}
               />
             ) : null /* Should be covered by loading or error states */ }
           </div>

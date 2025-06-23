@@ -53,6 +53,7 @@ export interface ChatMemberInfo {
 export interface CombinedAnalysisResponse {
   standupAnalysis: StandupAnalysisReport;
   allChatMembers: ChatMemberInfo[];
+  membersWithoutUpdates?: ChatMemberInfo[]; // Added for users who haven't sent updates
 }
 
 // --- End of New Types ---

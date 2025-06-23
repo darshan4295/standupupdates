@@ -24,7 +24,8 @@ interface BackendApiResponse {
 
 export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}) => {
   const [analysisReport, setAnalysisReport] = useState<StandupAnalysisReport | null>(null);
-  const [allChatMembersState, setAllChatMembersState] = useState<ChatMemberInfo[]>([]); // New state for all chat members
+  const [allChatMembersState, setAllChatMembersState] = useState<ChatMemberInfo[]>([]);
+  const [membersWithoutUpdates, setMembersWithoutUpdates] = useState<ChatMemberInfo[]>([]); // New state for members without updates
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
@@ -52,7 +53,8 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
       setLoading(true);
       setError(null);
       setAnalysisReport(null);
-      setAllChatMembersState([]); // Reset all chat members state
+      setAllChatMembersState([]);
+      setMembersWithoutUpdates([]); // Reset members without updates state
       
       try {
         // Set access token for profile photo service
@@ -81,7 +83,8 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
 
         if (responseData.success && responseData.data) {
           setAnalysisReport(responseData.data.standupAnalysis);
-          setAllChatMembersState(responseData.data.allChatMembers || []); // Set all chat members
+          setAllChatMembersState(responseData.data.allChatMembers || []);
+          setMembersWithoutUpdates(responseData.data.membersWithoutUpdates || []); // Set members without updates
           console.log('useStandupData: Received combined analysis:', responseData.data);
           console.log('useStandupData: AI Usage:', responseData.usage);
         } else {
@@ -93,6 +96,7 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
         setError(err instanceof Error ? err.message : 'Failed to load combined analysis data');
         setAnalysisReport(null);
         setAllChatMembersState([]);
+        setMembersWithoutUpdates([]);
       } finally {
         setLoading(false);
       }
@@ -290,6 +294,7 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
     setFilters,
     teamMembers: enhancedTeamMembers, // These are based on names, enhanced with photos if possible
     allTeamMembersForFilter: teamMembersForFilter, // This is the list of TeamMember-like objects for populating filters
+    membersWithoutUpdates, // Expose members without updates
     projects,
     refreshData,
     clearFilters,

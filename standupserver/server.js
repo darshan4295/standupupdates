@@ -277,10 +277,30 @@ app.post('/api/analyze-chat', async (req, res) => {
             }
         }
 
-        // Combine analysis with all chat members
+        // --- Step 4: Identify members without updates ---
+        let membersWithoutUpdates = [];
+        if (allChatMembers && allChatMembers.length > 0) {
+            const reporters = new Set();
+            if (standupAnalysisData && standupAnalysisData.dailyUpdateReports) {
+                standupAnalysisData.dailyUpdateReports.forEach(report => {
+                    if (report.employeeName) {
+                        reporters.add(report.employeeName);
+                    }
+                });
+            }
+
+            membersWithoutUpdates = allChatMembers.filter(member => {
+                // Check if the member's name is in the set of reporters
+                // Assuming member.name from Graph API matches employeeName from AI analysis
+                return !reporters.has(member.name);
+            });
+        }
+
+        // Combine analysis with all chat members and members without updates
         const responseData = {
             standupAnalysis: standupAnalysisData,
-            allChatMembers: allChatMembers
+            allChatMembers: allChatMembers,
+            membersWithoutUpdates: membersWithoutUpdates // Add this new field
         };
 
         res.json({
