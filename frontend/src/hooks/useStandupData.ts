@@ -40,10 +40,6 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
   const defaultChatId = '19:0ff2ed4d24904eda9d794c796ba49a78@thread.v2';
   const activeChatId = chatId || defaultChatId;
 
-  // Default chat ID
-  const defaultChatId = '19:0ff2ed4d24904eda9d794c796ba49a78@thread.v2';
-  const activeChatId = chatId || defaultChatId;
-
   // Core data fetching logic
   const fetchAnalysisData = useCallback(async (currentFilters: FilterOptions) => {
     if (!activeChatId) {
