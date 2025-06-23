@@ -39,6 +39,11 @@ If "No", identify "what is being carried forward" (as a list of tasks).
 If "No", identify the "reason" tasks were carried forward.
 Planned Tasks Today: Summarize "What do you plan to work on today?" into a precise list of upcoming tasks (2-4 bullet points).
 Duplication Check: Define isHighlySimilarToPrevious as true if the combined "Accomplishments" and "Planned Tasks Today" sections of this message are semantically and structurally (after HTML cleaning) >90% identical to the immediately preceding message from the same employee. Otherwise, false. This flag helps identify boilerplate or unvaried updates.
+Approval Status: Examine the 'reactions' array for each message. If a reaction with 'reactionType' of "✅" (Unicode U+2705) is present:
+  Extract the reacting user's ID from 'reaction.user.user.id' and store it as 'approvedById'.
+  Attempt to extract the reacting user's display name from 'reaction.user.user.displayName' and store it as 'approvedByName'. This might be null.
+  If multiple "✅" reactions exist, use the details from the first one found.
+  If no "✅" reaction is found, set 'approvedById' to null and 'approvedByName' to null.
 
 Output the results as a single JSON object with the following structure:
 {
@@ -54,7 +59,9 @@ Output the results as a single JSON object with the following structure:
       "carriedForwardTasks": ["string"],
       "carryForwardReason": "string | null",
       "plannedTasksToday": ["string"],
-      "isHighlySimilarToPrevious": true | false
+      "isHighlySimilarToPrevious": true | false,
+      "approvedById": "string | null", // User ID of the approver
+      "approvedByName": "string | null" // Display name of the approver, if available directly from reaction
     }
   ],
   "duplicationSummary": {
@@ -301,7 +308,26 @@ app.post('/api/analyze-chat', async (req, res) => {
             }
         }
 
-        // --- Step 4: Identify members without updates ---
+        // --- Step 4: Process AI Analysis for Approver Names ---
+        if (standupAnalysisData && standupAnalysisData.dailyUpdateReports && allChatMembers) {
+            const memberMap = new Map(allChatMembers.map(member => [member.id, member.name]));
+
+            standupAnalysisData.dailyUpdateReports.forEach(report => {
+                report.approvedBy = null; // Initialize approvedBy for the final report
+                if (report.approvedById) {
+                    if (report.approvedByName) {
+                        report.approvedBy = report.approvedByName;
+                    } else {
+                        report.approvedBy = memberMap.get(report.approvedById) || `Unknown Approver (ID: ${report.approvedById})`;
+                    }
+                }
+                delete report.approvedById; // Clean up intermediate field
+                delete report.approvedByName; // Clean up intermediate field
+            });
+        }
+
+
+        // --- Step 5: Identify members without updates ---
         let membersWithoutUpdates = [];
         if (allChatMembers && allChatMembers.length > 0) {
             const reporters = new Set();

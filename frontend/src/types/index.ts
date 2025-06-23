@@ -94,4 +94,54 @@ export interface FilterOptions {
     end: string;
   };
   projectFilter: string;
+  approvalStatus: 'all' | 'approved' | 'unapproved'; // Added for approval filter
+}
+
+// --- New Types for Reactions ---
+export interface ChatMessageReactionUser {
+  displayName: string;
+  // Add other relevant user fields if needed, e.g., id
+}
+
+export interface ChatMessageReaction {
+  reactionType: string;
+  user: ChatMessageReactionUser;
+  // createdDateTime?: string; // Optional, if needed later
+}
+
+// --- Update TeamsMessage to include reactions ---
+export interface TeamsMessage {
+  id: string;
+  messageType: string;
+  createdDateTime: string;
+  from: {
+    user: {
+      id: string;
+      displayName: string;
+      userIdentityType: string;
+      tenantId: string;
+    };
+  } | null;
+  body: {
+    contentType: string;
+    content: string;
+  };
+  attachments: any[];
+  mentions: any[];
+  reactions: ChatMessageReaction[]; // Updated to use the new type
+}
+
+// --- Update DailyUpdateReportItem to include approvedBy ---
+export interface DailyUpdateReportItem {
+  messageId: string;
+  employeeName: string;
+  createdDate: string; // YYYY-MM-DD
+  projectTeam: string | null;
+  accomplishments: string[]; // List of key achievements
+  taskCompletionStatus: "Yes" | "No" | "Not Specified";
+  carriedForwardTasks: string[]; // List of tasks
+  carryForwardReason: string | null;
+  plannedTasksToday: string[]; // List of tasks
+  isHighlySimilarToPrevious: boolean;
+  approvedBy: string | null; // Added for approval tracking
 }

@@ -154,6 +154,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       Highly Similar to Previous
                     </span>
                   )}
+                  {report.approvedBy && (
+                    <span title={`Approved by ${report.approvedBy}`} className="mt-2 sm:mt-0 sm:ml-2 flex items-center text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">
+                      <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                      Approved by {report.approvedBy}
+                    </span>
+                  )}
                 </div>
               </div>
 

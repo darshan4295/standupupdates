@@ -33,7 +33,8 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
     searchTerm: '',
     selectedMembers: [], // These will now filter by employeeName (string)
     dateRange: { start: '', end: '' },
-    projectFilter: ''
+    projectFilter: '',
+    approvalStatus: 'all' // Default to 'all'
   });
 
   // Default chat ID
@@ -171,6 +172,14 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
         return false;
       }
 
+      // Approval status filter
+      if (filters.approvalStatus === 'approved' && !report.approvedBy) {
+        return false;
+      }
+      if (filters.approvalStatus === 'unapproved' && report.approvedBy) {
+        return false;
+      }
+
       return true;
     });
   }, [analysisReport, filters]);
@@ -274,8 +283,9 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
     setFilters({
       searchTerm: '',
       selectedMembers: [], // Should now be employee names
-      dateRange: { start: '', end: '' },
-      projectFilter: ''
+      dateRange: { start: '', end: '' }, // Will be reset to 'today' by FilterSidebar effect
+      projectFilter: '',
+      approvalStatus: 'all' // Reset approval status
     });
   };
 
