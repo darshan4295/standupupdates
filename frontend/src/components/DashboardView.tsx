@@ -1,10 +1,13 @@
 import React from 'react';
-import { StandupAnalysisReport, DailyUpdateReportItem, FilterOptions, TeamMember } from '../types';
-import { AlertTriangle, ArrowRight, CheckCircle2, XCircle, ListChecks, CalendarDays, Users, BarChart3, Repeat } from 'lucide-react';
+import { StandupAnalysisReport, DailyUpdateReportItem, ChatMemberInfo } from '../types';
+import { AlertTriangle, CheckCircle2, XCircle, ListChecks, CalendarDays, Users, BarChart3 } from 'lucide-react';
+import DuplicateUpdatesChart from './DuplicateUpdatesChart'; // Import the new chart component
+import MissingUpdatesList from './MissingUpdatesList'; // Import the new list component
 
 interface DashboardViewProps {
   analysisReport: StandupAnalysisReport;
   filteredDailyUpdateReports: DailyUpdateReportItem[];
+  membersWithoutUpdates?: ChatMemberInfo[]; // Add new prop
   // Props below are for potential future use if DashboardView needs to manage some filter display or interactions
   // allTeamMembersForFilter: TeamMember[];
   // allProjectsForFilter: string[];
@@ -47,6 +50,7 @@ const DuplicationOverallBadge: React.FC<{ overall: StandupAnalysisReport['duplic
 const DashboardView: React.FC<DashboardViewProps> = ({
   analysisReport,
   filteredDailyUpdateReports,
+  membersWithoutUpdates,
 }) => {
 
   if (!analysisReport) {
@@ -74,11 +78,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             <BarChart3 className="w-6 h-6 mr-3 text-amber-600" />
             <h2 className="text-xl font-semibold">Overall Update Duplication</h2>
           </div>
-          <DuplicationOverallBadge overall={duplicationSummary.overall} />
+          {duplicationSummary && <DuplicationOverallBadge overall={duplicationSummary.overall} />}
         </div>
       </div>
 
-      {/* Duplication Summary Details */}
+      {/* New Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {duplicationSummary && duplicationSummary.details && (
+          <DuplicateUpdatesChart duplicationDetails={duplicationSummary.details} />
+        )}
+        <MissingUpdatesList membersWithoutUpdates={membersWithoutUpdates} />
+      </div>
+
+      {/* Duplication Summary Table - REMOVED as requested, replaced by chart */}
+      {/*
       {duplicationSummary.details && duplicationSummary.details.length > 0 && (
         <div className="bg-white shadow-lg rounded-xl p-6 border border-slate-200">
           <div className="flex items-center text-slate-700 mb-4">
@@ -107,11 +120,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
       )}
+      */}
 
       {/* Daily Update Reports Section */}
       <div>
         <h2 className="text-2xl font-bold text-slate-800 mb-2 mt-8">Daily Standup Reports</h2>
-        <p className="text-sm text-slate-500 mb-6">Displaying {filteredDailyUpdateReports.length} of {analysisReport.dailyUpdateReports.length} total reports for the period.</p>
+        <p className="text-sm text-slate-500 mb-6">
+          Displaying {filteredDailyUpdateReports.length} of {analysisReport?.dailyUpdateReports?.length || 0} total reports for the period.
+        </p>
 
         {filteredDailyUpdateReports.length === 0 && (
            <div className="bg-white shadow-md rounded-lg p-12 text-center border border-slate-200">
