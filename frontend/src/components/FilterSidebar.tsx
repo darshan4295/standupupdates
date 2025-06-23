@@ -90,10 +90,10 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     onFiltersChange({ ...filters, searchTerm });
   };
 
-  const handleMemberToggle = (memberId: string) => {
-    const newSelectedMembers = filters.selectedMembers.includes(memberId)
-      ? filters.selectedMembers.filter(id => id !== memberId)
-      : [...filters.selectedMembers, memberId];
+  const handleMemberToggle = (memberName: string) => { // Changed memberId to memberName
+    const newSelectedMembers = filters.selectedMembers.includes(memberName)
+      ? filters.selectedMembers.filter(name => name !== memberName)
+      : [...filters.selectedMembers, memberName];
     onFiltersChange({ ...filters, selectedMembers: newSelectedMembers });
   };
 
@@ -169,15 +169,15 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
               <div className="space-y-1 max-h-60 overflow-y-auto"> {/* Reduced space-y for tighter list items */}
                 {teamMembers.map((member) => (
                   <label 
-                    key={member.id} 
+                    key={member.id} // Keep using member.id for React key as it's derived and should be unique for the list
                     className={`flex items-center space-x-3 cursor-pointer p-2.5 rounded-lg transition-colors duration-150 ease-in-out ${
-                      filters.selectedMembers.includes(member.id) ? 'bg-sky-100 hover:bg-sky-200' : 'hover:bg-slate-200'
+                      filters.selectedMembers.includes(member.name) ? 'bg-sky-100 hover:bg-sky-200' : 'hover:bg-slate-200' // Use member.name for checking inclusion
                     }`}
                   >
                     <input
                       type="checkbox"
-                      checked={filters.selectedMembers.includes(member.id)}
-                      onChange={() => handleMemberToggle(member.id)}
+                      checked={filters.selectedMembers.includes(member.name)} // Use member.name
+                      onChange={() => handleMemberToggle(member.name)} // Use member.name
                       className="h-4 w-4 rounded border-slate-400 text-sky-600 focus:ring-2 focus:ring-sky-500 focus:ring-offset-1 focus:ring-offset-white"
                     />
                     

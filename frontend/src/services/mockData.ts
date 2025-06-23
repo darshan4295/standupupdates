@@ -1,4 +1,4 @@
-import { StandupUpdate, TeamMember, TeamsApiResponse } from '../types';
+import { TeamMember, TeamsApiResponse } from '../types'; // Removed StandupUpdate
 
 export const mockTeamMembers: TeamMember[] = [
   {
@@ -95,9 +95,7 @@ export const mockTeamsApiResponse: TeamsApiResponse = {
   ]
 };
 
-// Parse the mock data into standup updates
-import { MessageParser } from './messageParser';
-
-export const mockStandupUpdates: StandupUpdate[] = mockTeamsApiResponse.value
-  .map(message => MessageParser.parseStandupMessage(message))
-  .filter((update): update is StandupUpdate => update !== null);
+// Removed mockStandupUpdates and its derivation using MessageParser,
+// as MessageParser.ts and StandupUpdate type are deleted.
+// mockTeamsApiResponse (raw messages) is kept for potential backend testing.
+// mockTeamMembers is kept as it's used in useStandupData.ts for avatar enrichment.
