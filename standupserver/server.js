@@ -73,26 +73,16 @@ Remember to clean HTML from body.content.
 `;
 
 // Helper function to fetch messages from Microsoft Graph API
-async function fetchTeamsMessagesFromGraph(chatId, accessToken, startDate, endDate) {
+async function fetchTeamsMessagesFromGraph(chatId, accessToken) { // Removed startDate, endDate params
   if (!accessToken) {
     throw new Error('Microsoft Graph API access token is required.');
   }
 
-  let graphApiUrl = `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages?$top=50`; // Fetch top 50, default is 20.
+  // Fetch top 50 messages. More sophisticated paging could be added if needed.
+  // The date filtering will now happen in the application layer after fetching.
+  const graphApiUrl = `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages?$top=50`;
 
-  if (startDate && endDate) {
-    // Ensure dates are in YYYY-MM-DD format, then append time and Z for UTC
-    const startDateTime = `${startDate}T00:00:00Z`;
-    // For the end date, we want to include the entire day, so we set the filter to be less than the start of the next day.
-    const endDateObj = new Date(endDate);
-    endDateObj.setDate(endDateObj.getDate() + 1);
-    const endDateTime = `${endDateObj.toISOString().split('T')[0]}T00:00:00Z`;
-
-    const filterQuery = `createdDateTime ge ${startDateTime} and createdDateTime lt ${endDateTime}`;
-    graphApiUrl += `&$filter=${encodeURIComponent(filterQuery)}`;
-  }
-
-  console.log(`Fetching messages from Graph API: ${graphApiUrl}`);
+  console.log(`Fetching top 50 messages from Graph API: ${graphApiUrl}`);
 
   try {
     const response = await axios.get(graphApiUrl, {
@@ -246,30 +236,49 @@ app.post('/api/analyze-chat', async (req, res) => {
         const allChatMembers = await fetchChatMembersFromGraph(chatId, accessToken);
 
         // --- Step 1b: Fetch Teams Messages ---
-        // Pass startDate and endDate to the fetch function
-        const teamsMessages = await fetchTeamsMessagesFromGraph(chatId, accessToken, startDate, endDate);
+        let rawTeamsMessages = await fetchTeamsMessagesFromGraph(chatId, accessToken); // No date params here
 
-        if (!teamsMessages || teamsMessages.length === 0) {
-          console.log(`No messages found for chat ${chatId} (date range: ${startDate}-${endDate}) to analyze. Still returning all members.`);
+        // --- Step 1c: Filter messages by date in application memory ---
+        let filteredTeamsMessages = [];
+        if (rawTeamsMessages && rawTeamsMessages.length > 0 && startDate && endDate) {
+            const startDateTime = new Date(`${startDate}T00:00:00Z`);
+            const endDateObj = new Date(`${endDate}T00:00:00Z`);
+            // To include the entire endDate, set the limit to the start of the day AFTER endDate
+            endDateObj.setDate(endDateObj.getDate() + 1);
+
+            filteredTeamsMessages = rawTeamsMessages.filter(msg => {
+                if (!msg.createdDateTime) return false;
+                const msgDateTime = new Date(msg.createdDateTime);
+                return msgDateTime >= startDateTime && msgDateTime < endDateObj;
+            });
+            console.log(`Filtered ${rawTeamsMessages.length} raw messages down to ${filteredTeamsMessages.length} messages for date range ${startDate} to ${endDate}.`);
+        } else if (rawTeamsMessages) {
+            // If no date range specified or messages are empty, use raw (or empty)
+            filteredTeamsMessages = rawTeamsMessages;
+             console.log(`No date range provided or no raw messages, using all ${rawTeamsMessages.length} fetched messages.`);
         }
 
-        // --- Step 2: Prepare data for Deepseek AI (only if there are messages) ---
+        if (!filteredTeamsMessages || filteredTeamsMessages.length === 0) {
+          console.log(`No messages found for chat ${chatId} within date range ${startDate}-${endDate} (or no messages fetched). Still returning all members.`);
+        }
+
+        // --- Step 2: Prepare data for Deepseek AI (only if there are filtered messages) ---
         let standupAnalysisData = {
-            analysisDateRange: "N/A",
+            analysisDateRange: (startDate && endDate) ? `${startDate} to ${endDate}` : "All fetched messages",
             dailyUpdateReports: [],
             duplicationSummary: { overall: "Low", details: [] },
-            message: "No messages found in chat to analyze."
+            message: "No relevant messages found in chat to analyze for the selected period."
         };
         let aiUsage = null;
 
-        if (teamsMessages && teamsMessages.length > 0) {
+        if (filteredTeamsMessages && filteredTeamsMessages.length > 0) {
             const messagesForAI = [
                 { role: 'system', content: STANDUP_ANALYSIS_SYSTEM_PROMPT },
-                { role: 'user', content: JSON.stringify(teamsMessages) }
+                { role: 'user', content: JSON.stringify(filteredTeamsMessages) } // Use filtered messages
             ];
 
             // --- Step 3: Call Deepseek API ---
-            console.log(`Sending ${teamsMessages.length} messages to Deepseek for analysis.`);
+            console.log(`Sending ${filteredTeamsMessages.length} messages to Deepseek for analysis.`);
             const aiApiResponse = await axios.post(`${OPENAI_CONFIG.baseURL}/chat/completions`, {
                 model: 'deepseek-chat',
                 messages: messagesForAI,
