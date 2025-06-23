@@ -72,6 +72,26 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
   isOpen,
   onClose
 }) => {
+  const [selectedDateFilterType, setSelectedDateFilterType] = useState<'today' | 'yesterday' | 'custom'>('today');
+
+  // Helper function to get date strings in YYYY-MM-DD format
+  const getFormattedDate = (date: Date): string => {
+    return date.toISOString().split('T')[0];
+  };
+
+  // Initialize filters to "Today" on mount if no date is set
+  useEffect(() => {
+    if (!filters.dateRange.start && !filters.dateRange.end) {
+      const today = getFormattedDate(new Date());
+      onFiltersChange({
+        ...filters,
+        dateRange: { start: today, end: today }
+      });
+      setSelectedDateFilterType('today');
+    }
+  }, []); // Run once on mount
+
+
   // Debug logging for team members
   useEffect(() => {
     console.log('FilterSidebar: Team members received:', {
@@ -97,7 +117,36 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     onFiltersChange({ ...filters, selectedMembers: newSelectedMembers });
   };
 
-  const handleDateRangeChange = (field: 'start' | 'end', value: string) => {
+  const handleDateFilterTypeChange = (type: 'today' | 'yesterday' | 'custom') => {
+    setSelectedDateFilterType(type);
+    let newDateRange = { start: '', end: '' };
+
+    if (type === 'today') {
+      const today = getFormattedDate(new Date());
+      newDateRange = { start: today, end: today };
+    } else if (type === 'yesterday') {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      newDateRange = { start: getFormattedDate(yesterday), end: getFormattedDate(yesterday) };
+    } else {
+      // For 'custom', we retain the existing dates or clear them if they are from 'today'/'yesterday'
+      // This part might need refinement based on desired UX when switching to custom
+      // For now, if switching to custom, we'll clear it, expecting user to input.
+      // Or, keep the current values if they were already custom.
+      if (filters.dateRange.start && filters.dateRange.end) {
+         // If there are already dates, assume they are custom or user wants to modify them
+        newDateRange = { start: filters.dateRange.start, end: filters.dateRange.end };
+      } else {
+        // If no dates, clear them, user will input new ones.
+        newDateRange = { start: '', end: ''};
+      }
+    }
+    onFiltersChange({ ...filters, dateRange: newDateRange });
+  };
+
+  const handleCustomDateChange = (field: 'start' | 'end', value: string) => {
+    // When custom date input changes, ensure the type is set to 'custom'
+    setSelectedDateFilterType('custom');
     onFiltersChange({
       ...filters,
       dateRange: { ...filters.dateRange, [field]: value }
@@ -109,12 +158,15 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
   };
 
   const clearFilters = () => {
+    // When clearing filters, reset to "Today"
+    const today = getFormattedDate(new Date());
     onFiltersChange({
       searchTerm: '',
       selectedMembers: [],
-      dateRange: { start: '', end: '' },
+      dateRange: { start: today, end: today },
       projectFilter: ''
     });
+    setSelectedDateFilterType('today');
   };
 
   return (
@@ -237,20 +289,40 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
               Date Range
             </label>
             <div className="space-y-2">
-              <input
-                type="date"
-                placeholder="Start date"
-                value={filters.dateRange.start}
-                onChange={(e) => handleDateRangeChange('start', e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-400 bg-white rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-600 text-sm transition-colors duration-150 ease-in-out hover:border-sky-500 placeholder-slate-400"
-              />
-              <input
-                type="date"
-                placeholder="End date"
-                value={filters.dateRange.end}
-                onChange={(e) => handleDateRangeChange('end', e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-400 bg-white rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-600 text-sm transition-colors duration-150 ease-in-out hover:border-sky-500 placeholder-slate-400"
-              />
+              <div className="flex space-x-2">
+                {(['today', 'yesterday', 'custom'] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => handleDateFilterTypeChange(type)}
+                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      selectedDateFilterType === type
+                        ? 'bg-sky-600 text-white'
+                        : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                    }`}
+                  >
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </button>
+                ))}
+              </div>
+
+              {selectedDateFilterType === 'custom' && (
+                <div className="space-y-2 pt-2">
+                  <input
+                    type="date"
+                    placeholder="Start date"
+                    value={filters.dateRange.start || ''}
+                    onChange={(e) => handleCustomDateChange('start', e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-slate-400 bg-white rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-600 text-sm transition-colors duration-150 ease-in-out hover:border-sky-500 placeholder-slate-400"
+                  />
+                  <input
+                    type="date"
+                    placeholder="End date"
+                    value={filters.dateRange.end || ''}
+                    onChange={(e) => handleCustomDateChange('end', e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-slate-400 bg-white rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-600 text-sm transition-colors duration-150 ease-in-out hover:border-sky-500 placeholder-slate-400"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
