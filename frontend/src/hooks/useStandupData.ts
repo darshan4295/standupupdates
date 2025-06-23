@@ -49,6 +49,12 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
         setAnalysisReport(null);
         return;
       }
+      if (!accessToken) { // Add this check
+        setLoading(false);
+        setError("Access token is not available."); // Optional: set an error or just wait
+        setAnalysisReport(null);
+        return;
+      }
       console.log('useStandupData: Loading analysis data and all members...', { activeChatId, hasToken: !!accessToken });
       setLoading(true);
       setError(null);
@@ -225,6 +231,12 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
     if (!activeChatId) {
       setLoading(false);
       setError("Chat ID is not selected for refresh.");
+      setAnalysisReport(null);
+      return;
+    }
+    if (!accessToken) { // Add this check
+      setLoading(false);
+      setError("Access token is not available for refresh."); // Optional: set an error or just wait
       setAnalysisReport(null);
       return;
     }
