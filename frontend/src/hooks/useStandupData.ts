@@ -217,7 +217,7 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
     }
     
     return Array.from(membersMap.values());
-  }, [updates]);
+  }, [analysisReport]); // Changed dependency from updates to analysisReport
 
   // Enhanced team members with real profile photos
   // This section needs review. If we only have employee names from the AI,
