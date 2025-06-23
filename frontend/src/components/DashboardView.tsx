@@ -125,7 +125,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Daily Update Reports Section */}
       <div>
         <h2 className="text-2xl font-bold text-slate-800 mb-2 mt-8">Daily Standup Reports</h2>
-        <p className="text-sm text-slate-500 mb-6">Displaying {filteredDailyUpdateReports.length} of {analysisReport.dailyUpdateReports.length} total reports for the period.</p>
+        <p className="text-sm text-slate-500 mb-6">
+          Displaying {filteredDailyUpdateReports.length} of {analysisReport?.dailyUpdateReports?.length || 0} total reports for the period.
+        </p>
 
         {filteredDailyUpdateReports.length === 0 && (
            <div className="bg-white shadow-md rounded-lg p-12 text-center border border-slate-200">
