@@ -40,76 +40,103 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
   const defaultChatId = '19:0ff2ed4d24904eda9d794c796ba49a78@thread.v2';
   const activeChatId = chatId || defaultChatId;
 
-  // Load data when chat ID or access token changes
-  useEffect(() => {
-    const loadData = async () => {
-      if (!activeChatId) {
-        setLoading(false);
-        setError("Chat ID is not selected.");
-        setAnalysisReport(null);
-        return;
-      }
-      if (!accessToken) { // Add this check
-        setLoading(false);
-        setError("Access token is not available."); // Optional: set an error or just wait
-        setAnalysisReport(null);
-        return;
-      }
-      console.log('useStandupData: Loading analysis data and all members...', { activeChatId, hasToken: !!accessToken });
-      setLoading(true);
-      setError(null);
+  // Default chat ID
+  const defaultChatId = '19:0ff2ed4d24904eda9d794c796ba49a78@thread.v2';
+  const activeChatId = chatId || defaultChatId;
+
+  // Core data fetching logic
+  const fetchAnalysisData = useCallback(async (currentFilters: FilterOptions) => {
+    if (!activeChatId) {
+      setLoading(false);
+      setError("Chat ID is not selected.");
       setAnalysisReport(null);
       setAllChatMembersState([]);
-      setMembersWithoutUpdates([]); // Reset members without updates state
-      
-      try {
-        // Set access token for profile photo service
-        if (accessToken) {
-          ProfilePhotoService.setAccessToken(accessToken);
-        }
+      setMembersWithoutUpdates([]);
+      return;
+    }
+    if (!accessToken) {
+      setLoading(false);
+      setError("Access token is not available.");
+      setAnalysisReport(null);
+      setAllChatMembersState([]);
+      setMembersWithoutUpdates([]);
+      return;
+    }
 
-        // Fetch analysis from the backend
-        const serverResponse = await fetch('http://localhost:3000/api/analyze-chat', { // Assuming server is on port 3000
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            chatId: activeChatId,
-            accessToken: accessToken // Send token if backend needs it for MS Graph calls
-          }),
-        });
+    // Ensure dateRange has valid values before sending
+    // The FilterSidebar should initialize this to 'today'
+    if (!currentFilters.dateRange.start || !currentFilters.dateRange.end) {
+      console.warn('useStandupData: Date range not set, data fetch might be incomplete or use backend defaults.');
+      // Potentially set an error or don't fetch, depending on desired behavior
+      // For now, we'll let it proceed, but the backend might not filter by date
+    }
 
-        if (!serverResponse.ok) {
-          const errorData = await serverResponse.json().catch(() => ({ message: 'Failed to fetch analysis and parse error response' }));
-          throw new Error(errorData.message || `Server responded with ${serverResponse.status}`);
-        }
+    console.log('useStandupData: Fetching analysis data...', {
+      activeChatId,
+      hasToken: !!accessToken,
+      startDate: currentFilters.dateRange.start,
+      endDate: currentFilters.dateRange.end
+    });
 
-        const responseData: BackendApiResponse = await serverResponse.json(); // Use BackendApiResponse type
+    setLoading(true);
+    setError(null);
+    // Clear previous data before new fetch
+    setAnalysisReport(null);
+    setAllChatMembersState([]);
+    setMembersWithoutUpdates([]);
 
-        if (responseData.success && responseData.data) {
-          setAnalysisReport(responseData.data.standupAnalysis);
-          setAllChatMembersState(responseData.data.allChatMembers || []);
-          setMembersWithoutUpdates(responseData.data.membersWithoutUpdates || []); // Set members without updates
-          console.log('useStandupData: Received combined analysis:', responseData.data);
-          console.log('useStandupData: AI Usage:', responseData.usage);
-        } else {
-          throw new Error(responseData.message || responseData.error || 'Failed to get combined analysis data from server');
-        }
-        
-      } catch (err) {
-        console.error('useStandupData: Failed to load combined standup analysis data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load combined analysis data');
-        setAnalysisReport(null);
-        setAllChatMembersState([]);
-        setMembersWithoutUpdates([]);
-      } finally {
-        setLoading(false);
+    try {
+      if (accessToken) {
+        ProfilePhotoService.setAccessToken(accessToken);
+        // Consider clearing photo cache if dates change significantly, or on every refresh
+        // ProfilePhotoService.clearCache();
       }
-    };
 
-    loadData();
-  }, [activeChatId, accessToken]);
+      const serverResponse = await fetch('http://localhost:3000/api/analyze-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chatId: activeChatId,
+          accessToken,
+          startDate: currentFilters.dateRange.start,
+          endDate: currentFilters.dateRange.end,
+        }),
+      });
+
+      if (!serverResponse.ok) {
+        const errorData = await serverResponse.json().catch(() => ({ message: 'Failed to fetch analysis and parse error response' }));
+        throw new Error(errorData.message || `Server responded with ${serverResponse.status}`);
+      }
+
+      const responseData: BackendApiResponse = await serverResponse.json();
+      if (responseData.success && responseData.data) {
+        setAnalysisReport(responseData.data.standupAnalysis);
+        setAllChatMembersState(responseData.data.allChatMembers || []);
+        setMembersWithoutUpdates(responseData.data.membersWithoutUpdates || []);
+        console.log('useStandupData: Received combined analysis:', responseData.data);
+        if(responseData.usage) console.log('useStandupData: AI Usage:', responseData.usage);
+      } else {
+        throw new Error(responseData.message || responseData.error || 'Failed to get analysis data from server');
+      }
+    } catch (err) {
+      console.error('useStandupData: Failed to load standup analysis data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load analysis data');
+      setAnalysisReport(null);
+      setAllChatMembersState([]);
+      setMembersWithoutUpdates([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeChatId, accessToken]); // This useCallback depends on activeChatId and accessToken
+
+  // Load data when chat ID, access token, or filters (specifically dateRange) change
+  useEffect(() => {
+    // filters are updated by FilterSidebar, including initial 'Today'
+    // We only proceed if dateRange is populated, which FilterSidebar ensures on its mount.
+    if (filters.dateRange.start && filters.dateRange.end) {
+       fetchAnalysisData(filters);
+    }
+  }, [fetchAnalysisData, filters]); // Now depends on filters as well
 
   // Filtered daily update reports based on current filters
   const filteredDailyUpdateReports = useMemo(() => {
@@ -228,68 +255,24 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
 
 
   const loadDataForHook = useCallback(async () => {
-    if (!activeChatId) {
-      setLoading(false);
-      setError("Chat ID is not selected for refresh.");
-      setAnalysisReport(null);
-      return;
+    // This function is called by refreshData. It should use the most current filters.
+    // The `filters` object from the outer scope will be used by `fetchAnalysisData`.
+    if (filters.dateRange.start && filters.dateRange.end) { // Ensure dates are set
+        ProfilePhotoService.clearCache(); // Clear photo cache on manual refresh
+        fetchAnalysisData(filters);
+    } else {
+        // This case should ideally not be hit if FilterSidebar correctly sets initial dates
+        console.warn("Refresh called but date range is not set in filters.");
+        setError("Date range not set. Cannot refresh.");
     }
-    if (!accessToken) { // Add this check
-      setLoading(false);
-      setError("Access token is not available for refresh."); // Optional: set an error or just wait
-      setAnalysisReport(null);
-      return;
-    }
-    console.log('useStandupData: Refreshing analysis data...', { activeChatId, hasToken: !!accessToken });
-    setLoading(true);
-    setError(null);
-    setAnalysisReport(null); // Clear previous report
-
-    try {
-      if (accessToken) {
-        ProfilePhotoService.setAccessToken(accessToken); // Ensure service has token
-        ProfilePhotoService.clearCache(); // Clear photo cache on refresh
-      }
-
-      const serverResponse = await fetch('http://localhost:3000/api/analyze-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chatId: activeChatId, accessToken }),
-      });
-
-      if (!serverResponse.ok) {
-        const errorData = await serverResponse.json().catch(() => ({ message: 'Failed to refresh analysis and parse error response' }));
-        throw new Error(errorData.message || `Server responded with ${serverResponse.status} during refresh`);
-      }
-
-      const responseData: BackendApiResponse = await serverResponse.json(); // Corrected type
-      if (responseData.success && responseData.data) {
-        setAnalysisReport(responseData.data.standupAnalysis);
-        setAllChatMembersState(responseData.data.allChatMembers || []);
-        setMembersWithoutUpdates(responseData.data.membersWithoutUpdates || []);
-      } else {
-        throw new Error(responseData.message || responseData.error || 'Failed to get analysis data from server during refresh');
-      }
-    } catch (err) {
-      console.error('useStandupData: Failed to refresh standup analysis data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to refresh analysis data');
-      // Ensure all relevant states are cleared on error
-      setAnalysisReport(null);
-      setAllChatMembersState([]);
-      setMembersWithoutUpdates([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [activeChatId, accessToken]);
-
-  // Initial load and refresh trigger - REMOVED to prevent double loading
-  // useEffect(() => {
-  //   loadDataForHook();
-  // }, [loadDataForHook]);
+  }, [fetchAnalysisData, filters]); // Depends on the current filters state
 
   const refreshData = useCallback(() => {
+    // loadDataForHook already uses the `filters` from its closure,
+    // which are updated by setFilters.
     loadDataForHook();
   }, [loadDataForHook]);
+
 
   const clearFilters = () => {
     setFilters({

@@ -73,11 +73,25 @@ Remember to clean HTML from body.content.
 `;
 
 // Helper function to fetch messages from Microsoft Graph API
-async function fetchTeamsMessagesFromGraph(chatId, accessToken) {
+async function fetchTeamsMessagesFromGraph(chatId, accessToken, startDate, endDate) {
   if (!accessToken) {
     throw new Error('Microsoft Graph API access token is required.');
   }
-  const graphApiUrl = `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages?$top=50`; // Fetch top 50, default is 20. Can be configurable.
+
+  let graphApiUrl = `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages?$top=50`; // Fetch top 50, default is 20.
+
+  if (startDate && endDate) {
+    // Ensure dates are in YYYY-MM-DD format, then append time and Z for UTC
+    const startDateTime = `${startDate}T00:00:00Z`;
+    // For the end date, we want to include the entire day, so we set the filter to be less than the start of the next day.
+    const endDateObj = new Date(endDate);
+    endDateObj.setDate(endDateObj.getDate() + 1);
+    const endDateTime = `${endDateObj.toISOString().split('T')[0]}T00:00:00Z`;
+
+    const filterQuery = `createdDateTime ge ${startDateTime} and createdDateTime lt ${endDateTime}`;
+    graphApiUrl += `&$filter=${encodeURIComponent(filterQuery)}`;
+  }
+
   console.log(`Fetching messages from Graph API: ${graphApiUrl}`);
 
   try {
@@ -218,7 +232,7 @@ app.post('/parse', async (req, res) => {
 // New endpoint for Standup Analysis
 app.post('/api/analyze-chat', async (req, res) => {
     try {
-        const { chatId, accessToken } = req.body;
+        const { chatId, accessToken, startDate, endDate } = req.body; // Added startDate and endDate
 
         // TODO: Add proper validation for chatId
         if (!chatId) {
@@ -232,10 +246,11 @@ app.post('/api/analyze-chat', async (req, res) => {
         const allChatMembers = await fetchChatMembersFromGraph(chatId, accessToken);
 
         // --- Step 1b: Fetch Teams Messages ---
-        const teamsMessages = await fetchTeamsMessagesFromGraph(chatId, accessToken);
+        // Pass startDate and endDate to the fetch function
+        const teamsMessages = await fetchTeamsMessagesFromGraph(chatId, accessToken, startDate, endDate);
 
         if (!teamsMessages || teamsMessages.length === 0) {
-          console.log(`No messages found for chat ${chatId} to analyze. Still returning all members.`);
+          console.log(`No messages found for chat ${chatId} (date range: ${startDate}-${endDate}) to analyze. Still returning all members.`);
         }
 
         // --- Step 2: Prepare data for Deepseek AI (only if there are messages) ---
