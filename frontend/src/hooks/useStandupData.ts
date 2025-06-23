@@ -262,25 +262,30 @@ export const useStandupData = ({ accessToken, chatId }: UseStandupDataProps = {}
         throw new Error(errorData.message || `Server responded with ${serverResponse.status} during refresh`);
       }
 
-      const responseData: ApiResponse = await serverResponse.json();
+      const responseData: BackendApiResponse = await serverResponse.json(); // Corrected type
       if (responseData.success && responseData.data) {
-        setAnalysisReport(responseData.data);
+        setAnalysisReport(responseData.data.standupAnalysis);
+        setAllChatMembersState(responseData.data.allChatMembers || []);
+        setMembersWithoutUpdates(responseData.data.membersWithoutUpdates || []);
       } else {
         throw new Error(responseData.message || responseData.error || 'Failed to get analysis data from server during refresh');
       }
     } catch (err) {
       console.error('useStandupData: Failed to refresh standup analysis data:', err);
       setError(err instanceof Error ? err.message : 'Failed to refresh analysis data');
+      // Ensure all relevant states are cleared on error
       setAnalysisReport(null);
+      setAllChatMembersState([]);
+      setMembersWithoutUpdates([]);
     } finally {
       setLoading(false);
     }
   }, [activeChatId, accessToken]);
 
-  // Initial load and refresh trigger
-  useEffect(() => {
-    loadDataForHook();
-  }, [loadDataForHook]);
+  // Initial load and refresh trigger - REMOVED to prevent double loading
+  // useEffect(() => {
+  //   loadDataForHook();
+  // }, [loadDataForHook]);
 
   const refreshData = useCallback(() => {
     loadDataForHook();
