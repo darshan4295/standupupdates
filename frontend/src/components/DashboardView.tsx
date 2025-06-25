@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StandupAnalysisReport, DailyUpdateReportItem, ChatMemberInfo } from '../types';
-import { AlertTriangle, CheckCircle2, XCircle, ListChecks, CalendarDays, Users, BarChart3 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, ListChecks, CalendarDays, Users, BarChart3, CalendarClock } from 'lucide-react';
 import DuplicateUpdatesChart from './DuplicateUpdatesChart'; // Import the new chart component
 import MissingUpdatesList from './MissingUpdatesList'; // Import the new list component
+import StandupCalendarModal from './StandupCalendarModal'; // Import the modal
 
 interface DashboardViewProps {
   analysisReport: StandupAnalysisReport;
@@ -52,6 +53,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   filteredDailyUpdateReports,
   membersWithoutUpdates,
 }) => {
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
 
   if (!analysisReport) {
     // This case should ideally be handled by App.tsx's loading/error states
@@ -63,8 +65,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className="space-y-6 md:space-y-8 p-1"> {/* Reduced padding as App.tsx has it */}
 
-      {/* Header Row: Date Range and Overall Duplication */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      {/* Header Row: Date Range, Overall Duplication, and Calendar Button */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="bg-white shadow-lg rounded-xl p-6 border border-slate-200">
           <div className="flex items-center text-slate-700 mb-2">
             <CalendarDays className="w-6 h-6 mr-3 text-sky-600" />
@@ -80,7 +82,22 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           {duplicationSummary && <DuplicationOverallBadge overall={duplicationSummary.overall} />}
         </div>
+
+        <div className="bg-white shadow-lg rounded-xl p-6 border border-slate-200 flex flex-col justify-center items-center">
+           <button
+            onClick={() => setIsCalendarModalOpen(true)}
+            className="flex items-center justify-center px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50"
+          >
+            <CalendarClock className="w-5 h-5 mr-2" />
+            View Standup Calendar
+          </button>
+        </div>
       </div>
+
+      <StandupCalendarModal
+        isOpen={isCalendarModalOpen}
+        onClose={() => setIsCalendarModalOpen(false)}
+      />
 
       {/* New Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

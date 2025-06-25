@@ -1,0 +1,136 @@
+.standup-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.standup-modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 900px; /* Max width of the calendar itself */
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.standup-modal-content h2 {
+  margin-top: 0;
+}
+
+.modal-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+  align-items: flex-end;
+}
+
+.modal-controls > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-controls label {
+  font-size: 0.9em;
+  margin-bottom: 4px;
+}
+
+.modal-controls input[type="text"],
+.modal-controls input[type="password"],
+.modal-controls input[type="date"] {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.modal-controls button {
+  padding: 10px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.modal-controls button:hover {
+  background-color: #0056b3;
+}
+
+.modal-controls button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.modal-error {
+  color: red;
+  margin-bottom: 15px;
+}
+
+.calendar-container {
+  margin-bottom: 20px;
+}
+
+/* Ensure FullCalendar elements are styled appropriately within the modal */
+.fc .fc-toolbar-title {
+  font-size: 1.2em; /* Example adjustment */
+}
+
+.fc .fc-button {
+  font-size: 0.9em; /* Example adjustment */
+}
+
+.modal-close-button {
+  display: block;
+  margin-top: 15px;
+  margin-left: auto; /* Align to the right */
+  padding: 8px 15px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.modal-close-button:hover {
+  background-color: #545b62;
+}
+
+.event-detail-popup {
+  position: absolute;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  padding: 10px;
+  z-index: 1001; /* Above modal overlay */
+  border-radius: 4px;
+  font-size: 0.9em;
+  max-width: 300px;
+}
+
+.event-detail-popup h5 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 1em;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.event-detail-popup ul {
+  margin-top: 5px;
+  margin-bottom: 5px;
+  padding-left: 20px;
+}
+
+.event-detail-popup p {
+  margin: 5px 0;
+}
