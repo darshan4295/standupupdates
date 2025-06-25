@@ -73,10 +73,30 @@ Output the results as a single JSON object with the following structure:
         "consecutiveRepeats": "number"
       }
     ]
+  },
+  "calendarData": {
+    "dailySummaries": [
+      {
+        "date": "YYYY-MM-DD",
+        "submitted": ["string"],
+        "notSubmitted": ["string"]
+      }
+    ],
+    "allConsideredMembers": ["string"]
   }
 }
 Input Data will be a JSON array of Teams messages. Process all messages.
 Remember to clean HTML from body.content.
+
+Calendar Data Generation:
+The user of this JSON output will also provide a list of all chat members (e.g., as `allChatMembers` in a separate part of the overall API response, not part of the AI's direct input messages for this prompt, but you should assume it's available to the system calling you).
+Your goal is to populate the `calendarData` object.
+1. `allConsideredMembers`: This should be a list of employee display names. You should infer this list from the `from.user.displayName` fields of all messages from `messageType: "message"` in the input, ensuring each unique name appears once. This represents all employees who *could* have sent an update.
+2. `dailySummaries`: Create an array of objects, one for each unique date found in the `createdDateTime` of the input messages (ensure dates are formatted "YYYY-MM-DD").
+   For each date entry in `dailySummaries`:
+   - `date`: The specific "YYYY-MM-DD" date.
+   - `submitted`: A list of `employeeName`s (displayNames) who submitted a `dailyUpdateReport` on this `date`.
+   - `notSubmitted`: A list of `employeeName`s (from your inferred `allConsideredMembers` list) who did *not* submit a `dailyUpdateReport` on this `date`.
 `;
 
 // Helper function to fetch messages from Microsoft Graph API
@@ -327,30 +347,50 @@ app.post('/api/analyze-chat', async (req, res) => {
         }
 
 
-        // --- Step 5: Identify members without updates ---
-        let membersWithoutUpdates = [];
+        // --- Step 5: Identify members without updates (overall) ---
+        let membersWithoutUpdatesOverall = [];
+        const allChatMemberNames = allChatMembers.map(m => m.name);
+
         if (allChatMembers && allChatMembers.length > 0) {
-            const reporters = new Set();
+            const reportersOverall = new Set();
             if (standupAnalysisData && standupAnalysisData.dailyUpdateReports) {
                 standupAnalysisData.dailyUpdateReports.forEach(report => {
                     if (report.employeeName) {
-                        reporters.add(report.employeeName);
+                        reportersOverall.add(report.employeeName);
                     }
                 });
             }
-
-            membersWithoutUpdates = allChatMembers.filter(member => {
-                // Check if the member's name is in the set of reporters
-                // Assuming member.name from Graph API matches employeeName from AI analysis
-                return !reporters.has(member.name);
-            });
+            membersWithoutUpdatesOverall = allChatMemberNames.filter(name => !reportersOverall.has(name));
         }
+
+        // --- Step 6: Refine AI-generated calendarData with definitive allChatMembers ---
+        if (standupAnalysisData && standupAnalysisData.calendarData && allChatMembers && allChatMembers.length > 0) {
+            // Update allConsideredMembers to reflect the true list from Graph API
+            standupAnalysisData.calendarData.allConsideredMembers = allChatMemberNames;
+
+            if (standupAnalysisData.calendarData.dailySummaries) {
+                standupAnalysisData.calendarData.dailySummaries.forEach(dailySummary => {
+                    const submittedOnDate = new Set(dailySummary.submitted);
+                    dailySummary.notSubmitted = allChatMemberNames.filter(name => !submittedOnDate.has(name));
+                });
+            }
+        } else if (standupAnalysisData && !standupAnalysisData.calendarData && allChatMembers && allChatMembers.length > 0) {
+            // If AI didn't produce calendarData (e.g. no messages to analyze), create a basic one
+            // This ensures the frontend still knows about all members for date ranges with no updates.
+            standupAnalysisData.calendarData = {
+                allConsideredMembers: allChatMemberNames,
+                dailySummaries: [] // No specific daily submissions to report from AI
+            };
+            // Note: The frontend will need to be smart about displaying days with no entries in dailySummaries.
+            // It might infer that for such days, everyone is "notSubmitted" if the day is within the requested range.
+        }
+
 
         // Combine analysis with all chat members and members without updates
         const responseData = {
-            standupAnalysis: standupAnalysisData,
-            allChatMembers: allChatMembers,
-            membersWithoutUpdates: membersWithoutUpdates // Add this new field
+            standupAnalysis: standupAnalysisData, // Contains potentially refined calendarData
+            allChatMembers: allChatMembers, // Full member details
+            membersWithoutUpdates: membersWithoutUpdatesOverall // Renamed for clarity
         };
 
         res.json({

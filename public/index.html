@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standup Calendar</title>
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css' rel='stylesheet' />
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #controls { margin-bottom: 20px; }
+        #calendar { max-width: 900px; margin: 0 auto; }
+        .fc-event-title { white-space: normal; } /* Allow title to wrap */
+        .event-details {
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+        .event-details h5 { margin-top: 0; }
+        .event-details ul { padding-left: 20px; margin-bottom: 0;}
+    </style>
+</head>
+<body>
+    <h1>Standup Update Calendar</h1>
+
+    <div id="controls">
+        <label for="chatId">Chat ID:</label>
+        <input type="text" id="chatId" name="chatId" value="YOUR_CHAT_ID_HERE">
+        <br><br>
+        <label for="accessToken">Graph API Access Token:</label>
+        <input type="password" id="accessToken" name="accessToken" style="width: 300px;">
+        <br><br>
+        <label for="startDate">Start Date:</label>
+        <input type="date" id="startDate" name="startDate">
+        &nbsp;
+        <label for="endDate">End Date:</label>
+        <input type="date" id="endDate" name="endDate">
+        <br><br>
+        <button id="fetchUpdatesButton">Fetch and Display Updates</button>
+    </div>
+
+    <div id='calendar'></div>
+    <div id="eventDetailsPopup" style="display:none; position:absolute; background-color:white; border:1px solid black; padding:10px; z-index:100;">
+        <!-- Content will be injected by JavaScript -->
+    </div>
+
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.js'></script>
+    <script src="script.js"></script>
+</body>
+</html>
