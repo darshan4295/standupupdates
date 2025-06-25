@@ -5,7 +5,7 @@ import { msalConfig } from './config/authConfig';
 import { Header } from './components/Header';
 import { FilterSidebar } from './components/FilterSidebar';
 // import { StandupCard } from './components/StandupCard'; // Will be replaced by DashboardView
-import { DashboardView } from './components/DashboardView'; // Added for future use
+import DashboardView  from './components/DashboardView'; // Added for future use
 import { EmptyState } from './components/EmptyState';
 import { useStandupData } from './hooks/useStandupData';
 import { Loader2, AlertCircle } from 'lucide-react';
