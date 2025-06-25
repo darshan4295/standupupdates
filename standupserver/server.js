@@ -89,14 +89,14 @@ Input Data will be a JSON array of Teams messages. Process all messages.
 Remember to clean HTML from body.content.
 
 Calendar Data Generation:
-The user of this JSON output will also provide a list of all chat members (e.g., as `allChatMembers` in a separate part of the overall API response, not part of the AI's direct input messages for this prompt, but you should assume it's available to the system calling you).
-Your goal is to populate the `calendarData` object.
-1. `allConsideredMembers`: This should be a list of employee display names. You should infer this list from the `from.user.displayName` fields of all messages from `messageType: "message"` in the input, ensuring each unique name appears once. This represents all employees who *could* have sent an update.
-2. `dailySummaries`: Create an array of objects, one for each unique date found in the `createdDateTime` of the input messages (ensure dates are formatted "YYYY-MM-DD").
-   For each date entry in `dailySummaries`:
-   - `date`: The specific "YYYY-MM-DD" date.
-   - `submitted`: A list of `employeeName`s (displayNames) who submitted a `dailyUpdateReport` on this `date`.
-   - `notSubmitted`: A list of `employeeName`s (from your inferred `allConsideredMembers` list) who did *not* submit a `dailyUpdateReport` on this `date`.
+The user of this JSON output will also provide a list of all chat members (e.g., as \`allChatMembers\` in a separate part of the overall API response, not part of the AI's direct input messages for this prompt, but you should assume it's available to the system calling you).
+Your goal is to populate the \`calendarData\` object.
+1. \`allConsideredMembers\`: This should be a list of employee display names. You should infer this list from the \`from.user.displayName\` fields of all messages from \`messageType: "message"\` in the input, ensuring each unique name appears once. This represents all employees who *could* have sent an update.
+2. \`dailySummaries\`: Create an array of objects, one for each unique date found in the \`createdDateTime\` of the input messages (ensure dates are formatted "YYYY-MM-DD").
+   For each date entry in \`dailySummaries\`:
+   - \`date\`: The specific "YYYY-MM-DD" date.
+   - \`submitted\`: A list of \`employeeName\`s (displayNames) who submitted a \`dailyUpdateReport\` on this \`date\`.
+   - \`notSubmitted\`: A list of \`employeeName\`s (from your inferred \`allConsideredMembers\` list) who did *not* submit a \`dailyUpdateReport\` on this \`date\`.
 `;
 
 // Helper function to fetch messages from Microsoft Graph API
